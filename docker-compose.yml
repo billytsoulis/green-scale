@@ -1,0 +1,31 @@
+# Location: /home/YOUR_USER/projects/greenscale/docker-compose.yml
+
+services:
+  # PostgreSQL: The Primary Financial Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: greenscale-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: greenscale
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d greenscale"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis: The High-Speed Caching Layer
+  redis:
+    image: redis:7-alpine
+    container_name: greenscale-cache
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+
+volumes:
+  postgres_data:

@@ -1,0 +1,18 @@
+{
+  "name": "@greenscale/database",
+  "version": "0.1.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "latest",
+    "pg": "^8.11.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "latest",
+    "typescript": "latest"
+  }
+}
