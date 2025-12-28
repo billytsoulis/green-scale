@@ -19,6 +19,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # pgAdmin: Database GUI for development/showcase
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: greenscale-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@greenscale.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    # Permanent Solution: Added volume to persist pgAdmin settings and server registrations
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Redis: The High-Speed Caching Layer
   redis:
     image: redis:7-alpine
@@ -26,6 +42,31 @@ services:
     ports:
       - "6379:6379"
     command: redis-server --save 60 1 --loglevel warning
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Redis Insight: Professional GUI for Redis
+  redis-insight:
+    image: redis/redisinsight:latest
+    container_name: greenscale-redis-insight
+    ports:
+      - "8001:5540"
+    # Permanent Solution: Added volume to persist Redis Insight connections
+    volumes:
+      - redis_insight_data:/db
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5540/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres_data:
+  pgadmin_data:       # Persistent storage for pgAdmin
+  redis_insight_data: # Persistent storage for Redis Insight

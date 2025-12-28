@@ -1,134 +1,86 @@
-# Turborepo starter
+## Step A: Start Infrastructure (Docker)
 
-This Turborepo starter is maintained by the Turborepo core team.
+Ensure you are in the root greenscale folder:
 
-## Using this example
+docker-compose up -d
+# Verify with:
+docker ps
 
-Run the following command:
 
-```sh
-npx create-turbo@latest
-```
+## Step B: Sync the Database Schema
 
-## What's inside?
+cd packages/database
+npx drizzle-kit push
+cd ../..
 
-This Turborepo includes the following packages/apps:
 
-### Apps and Packages
+## Step C: Launch the Full Ecosystem
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+From the root greenscale folder, run the Turborepo dev command:
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+pnpm dev
 
-### Utilities
 
-This Turborepo has some additional tools already setup for you:
+What to look for in the terminal:
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+You should see multiple "tasks" starting simultaneously.
 
-### Build
+Next.js will compile the client-portal.
 
-To build all apps and packages, run the following command:
+Vite will start the staff-dashboard.
 
-```
-cd my-turborepo
+If any task shows RED, it usually means a missing dependency. Run pnpm install again at the root.
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
+http://localhost:3000 -> Should show the Next.js welcome page.
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
-```
+http://localhost:8000/docs -> Should show the Swagger UI for your Python API.
 
-You can build a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+http://localhost:5173 -> Should show the Vite + React logo.
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+http://localhost:5050 -> pgAdmin
+Email: admin@greenscale.com
+Password: admin
+Click "Add New Server" and fill in these details:
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+General Tab:
 
-### Develop
+Name: GreenScale DB
 
-To develop all apps and packages, run the following command:
+Connection Tab:
 
-```
-cd my-turborepo
+Host name/address: postgres (This works because they are in the same Docker network).
 
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
+Port: 5432
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+Maintenance database: greenscale
 
-You can develop a specific package by using a [filter](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters):
+Username: admin
 
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
+Password: password123
 
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+Click Save.
 
-### Remote Caching
+http://localhost:8001 -> redis
+When prompted to add a database, use the Host: redis (the name of the service in our Docker network).
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+The Port is 6379
+redis:6379
+Database alias: 127.0.0.1:6379
+no username and password
+check the standalone checkbox
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+## Nuclear clean
+- Navigate to the root cd ~/projects/greenscale
+- rm -rf node_modules pnpm-lock.yaml pnpm-workspace.yaml.lock
+- pnpm store prune
+- pnpm install
+--
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## Generate data
+- cd packages/database
+- pnpm db:generate
+- pnpm db:push
+- pnpm db:seed
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-```
-# With [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
-
-# Without [global `turbo`](https://turborepo.com/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.com/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.com/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.com/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.com/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.com/docs/reference/configuration)
-- [CLI Usage](https://turborepo.com/docs/reference/command-line-reference)
+## Test the data
+- npx tsx test-read.ts
