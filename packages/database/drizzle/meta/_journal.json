@@ -8,6 +8,13 @@
       "when": 1766948496923,
       "tag": "0000_hard_xavin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1767118696140,
+      "tag": "0001_legal_james_howlett",
+      "breakpoints": true
     }
   ]
 }
