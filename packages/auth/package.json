@@ -1,0 +1,10 @@
+{
+  "name": "@greenscale/auth",
+  "version": "0.1.0",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "dependencies": {
+    "better-auth": "1.1.13",
+    "@greenscale/database": "workspace:*"
+  }
+}

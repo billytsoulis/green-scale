@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@greenscale/auth": "workspace:*",
+    "better-auth": "1.1.13",
+    "better-fetch": "^1.1.2",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3"
