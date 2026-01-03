@@ -1,26 +1,45 @@
+/* 1. Load Tailwind v4 Engine */
 @import "tailwindcss";
 
+/* 2. Load Shared GreenScale Theme Variables */
+/* We import the shared theme file which contains our @theme tokens 
+   and base layer configurations for the Emerald & Gold aesthetic.
+*/
+@import "../../../../packages/ui/src/theme.css";
+
+/* 3. Global App-specific Styles */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0f172a; /* slate-900 */
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    /* Enable smooth font rendering for a premium feel */
+    @apply antialiased;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* 4. Utility Classes for High-End Dashboard */
+@layer utilities {
+  /* Custom scrollbar matching the minimalist GreenScale aesthetic */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  }
+
+  /* Text balance for luxury typography in headers */
+  .text-balance {
+    text-wrap: balance;
+  }
 }

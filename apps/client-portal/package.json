@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@greenscale/auth": "workspace:*",
+    "@repo/ui": "workspace:*",
     "better-auth": "1.1.13",
     "better-fetch": "^1.1.2",
     "next": "16.1.1",
