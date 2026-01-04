@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ESNext"],
+    "outDir": "dist",
+    /* FIX: We remove 'rootDir: src' to allow TypeScript to resolve 
+       and compile files from the workspace (packages/database) 
+    */
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "paths": {
+      "@greenscale/database": ["../../packages/database/index.ts"]
+    }
+  },
+  "include": ["src/**/*", "../../packages/database/index.ts"],
+  "exclude": ["node_modules", "dist"]
+}

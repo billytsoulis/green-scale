@@ -12,3 +12,4 @@ export * from "./badge";
 
 // Complex Modules
 export * from "./table";
+export * from "./auth-layout";

@@ -4,7 +4,12 @@ import * as schema from "./schema";
 import { InferSelectModel, InferInsertModel } from "drizzle-orm";
 import * as dotenv from "dotenv";
 
-// 1. Load the environment variables from the monorepo root
+/**
+ * GreenScale Database Package
+ * Shared Drizzle ORM instance and type definitions.
+ */
+
+// Load environment variables from the monorepo root
 dotenv.config({ path: "../../.env" });
 
 const connectionString = process.env.DATABASE_URL;
@@ -16,8 +21,8 @@ if (!connectionString) {
 /**
  * Staff Engineer Tip:
  * We export 'client', 'db', and 'schema' here. 
- * Exporting 'schema' as a named export allows scripts like our seeder
- * to use relational queries (db.query.users...) with full type safety.
+ * Exporting 'schema' as a named export allows scripts and the API Gateway
+ * to utilize relational queries and adapter mappings with full type safety.
  */
 export const client = postgres(connectionString);
 export const db = drizzle(client, { schema });

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, numeric, uuid, pgEnum, jsonb, index, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, numeric, uuid, pgEnum, jsonb, index, boolean, serial } from "drizzle-orm/pg-core";
 
 // --- EXISTING FINTECH ENUMS ---
 export const userRoleEnum = pgEnum("user_role", ["ADMIN", "MANAGER", "ANALYST", "INVESTOR"]);
@@ -15,7 +15,6 @@ export const users = pgTable("user", {
   image: text("image"),
   createdAt: timestamp("created_at").notNull(),
   updatedAt: timestamp("updated_at").notNull(),
-  // Custom GreenScale Field: Role-Based Access
   role: userRoleEnum("role").default("INVESTOR").notNull(),
 });
 
@@ -59,7 +58,18 @@ export const verifications = pgTable("verification", {
   updatedAt: timestamp("updated_at"),
 });
 
-// --- FINTECH BUSINESS TABLES (Updated with String IDs for Auth Sync) ---
+/**
+ * FIX: JWKS Table
+ * Required by the Better Auth JWT plugin to store signing keys.
+ */
+export const jwks = pgTable("jwks", {
+  id: text("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+});
+
+// --- FINTECH BUSINESS TABLES ---
 
 export const portfolios = pgTable("portfolios", {
   id: uuid("id").primaryKey().defaultRandom(),
