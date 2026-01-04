@@ -11,5 +11,6 @@ export * from "./modal";
 export * from "./badge";
 
 // Complex Modules
+export * from "./icons";
 export * from "./table";
 export * from "./auth-layout";

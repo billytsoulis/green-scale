@@ -5,6 +5,7 @@ import React from "react";
 /**
  * GreenScale Shared Icon Library
  * Premium, lightweight SVG icons with dynamic styling and animation support.
+ * Path: packages/ui/src/icons.tsx
  */
 
 export interface IconProps extends React.SVGProps<SVGSVGElement> {
@@ -40,7 +41,7 @@ const IconWrapper = ({
   </svg>
 );
 
-// 1. Dashboard (Home)
+// 1. Dashboard (Home/Command Center)
 export const DashboardIcon = (props: IconProps) => (
   <IconWrapper {...props}>
     <rect x="3" y="3" width="7" height="7" />
@@ -50,7 +51,7 @@ export const DashboardIcon = (props: IconProps) => (
   </IconWrapper>
 );
 
-// 2. Portfolio (Chart Bar)
+// 2. Portfolio (Chart Bar / Trade Blotter)
 export const PortfolioIcon = (props: IconProps) => (
   <IconWrapper {...props}>
     <line x1="12" y1="20" x2="12" y2="10" />
@@ -59,7 +60,7 @@ export const PortfolioIcon = (props: IconProps) => (
   </IconWrapper>
 );
 
-// 3. Sustainability (Leaf)
+// 3. Sustainability (ESG / Leaf)
 export const SustainabilityIcon = (props: IconProps) => (
   <IconWrapper {...props}>
     <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 2 7a7 7 0 0 1-7 7c-1.07 0-3.2.39-3 2z" />
@@ -68,7 +69,7 @@ export const SustainabilityIcon = (props: IconProps) => (
   </IconWrapper>
 );
 
-// 4. Drift (Trending)
+// 4. Drift (Trending / Action Required)
 export const DriftIcon = ({ animate, ...props }: IconProps) => (
   <IconWrapper 
     animate={animate} 
@@ -80,7 +81,7 @@ export const DriftIcon = ({ animate, ...props }: IconProps) => (
   </IconWrapper>
 );
 
-// 5. Clients (Users)
+// 5. Clients (Users / Directory)
 export const ClientIcon = (props: IconProps) => (
   <IconWrapper {...props}>
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -90,20 +91,20 @@ export const ClientIcon = (props: IconProps) => (
   </IconWrapper>
 );
 
-// 6. Alert (Bell)
-export const AlertIcon = (props: IconProps) => (
-  <IconWrapper {...props}>
-    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-  </IconWrapper>
-);
-
-// 7. Sign Out (Log-out)
+// 6. Sign Out (Logout)
 export const SignOutIcon = (props: IconProps) => (
   <IconWrapper {...props}>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <polyline points="16 17 21 12 16 7" />
     <line x1="21" y1="12" x2="9" y2="12" />
+  </IconWrapper>
+);
+
+// 7. Alert (Bell)
+export const AlertIcon = (props: IconProps) => (
+  <IconWrapper {...props}>
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
   </IconWrapper>
 );
 

@@ -2,11 +2,19 @@
 
 import React from "react";
 
+/**
+ * GreenScale Shared Badge Component
+ * Path: packages/ui/src/badge.tsx
+ * * Luxury status indicator with optional pulse animation.
+ */
+
 interface BadgeProps {
   children: React.ReactNode;
   variant?: "success" | "warning" | "danger" | "info" | "gold";
   size?: "sm" | "md";
   showDot?: boolean;
+  /** Enables the pulse animation on the status dot */
+  animate?: boolean;
   className?: string;
 }
 
@@ -15,41 +23,55 @@ export const Badge = ({
   variant = "info",
   size = "md",
   showDot = false,
+  animate = false,
   className = "",
 }: BadgeProps) => {
-  const baseStyles = "inline-flex items-center font-bold tracking-tight rounded-full uppercase";
+  const baseStyles = "inline-flex items-center font-bold tracking-tight rounded-full uppercase transition-all whitespace-nowrap";
   
   const variants = {
-    // GreenScale Emerald
-    success: "bg-emerald-50 text-emerald-700 border border-emerald-100",
-    // Warning Gold
-    warning: "bg-amber-50 text-amber-700 border border-amber-100",
-    // Danger Red
+    // Brand Emerald Palette
+    success: "bg-brand-emerald-50 text-brand-emerald-700 border border-brand-emerald-100",
+    // Brand Gold Palette
+    warning: "bg-brand-gold-50 text-brand-gold-600 border border-brand-gold-100",
+    // Red Palette (Requires definition in theme.css)
     danger: "bg-red-50 text-red-700 border border-red-100",
-    // Neutral Slate
+    // Slate Palette (Requires definition in theme.css)
     info: "bg-slate-50 text-slate-600 border border-slate-200",
-    // Premium Brand Gold
-    gold: "bg-[#fffbeb] text-[#d97706] border border-[#fef3c7] shadow-sm",
+    // Premium Gold Variant
+    gold: "bg-brand-gold-50 text-brand-gold-600 border border-brand-gold-100 shadow-sm",
   };
 
+  // const dotColors = {
+  //   success: "bg-brand-emerald-500",
+  //   warning: "bg-brand-gold-500",
+  //   danger: "bg-red-500",
+  //   info: "bg-slate-400",
+  //   gold: "bg-brand-gold-400",
+  // };
   const dotColors = {
-    success: "bg-emerald-500",
-    warning: "bg-amber-500",
-    danger: "bg-red-500",
-    info: "bg-slate-400",
-    gold: "bg-[#fbbf24]",
-  };
+  success: "#10b981", // brand-emerald-500
+  warning: "#f59e0b", // brand-gold-500
+  danger: "#ef4444",  // red-500
+  info: "#94a3b8",    // slate-400
+  gold: "#fbbf24",    // brand-gold-400
+};
 
   const sizes = {
-    sm: "px-2.5 py-0.5 text-[10px] gap-1.5",
-    md: "px-3 py-1 text-[11px] gap-2",
+    sm: "px-2 py-0.5 text-[10px]",
+    md: "px-2 py-1 text-[10.4px]",
   };
 
   return (
     <span className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}>
       {showDot && (
-        <span className={`w-1.5 h-1.5 rounded-full ${dotColors[variant]} animate-pulse`} />
-      )}
+  <span 
+    style={{ backgroundColor: dotColors[variant] }}
+    className={`
+      w-1.5 h-1.5 rounded-full mr-1.5 shrink-0 inline-block
+      ${animate ? "animate-pulse" : ""}
+    `} 
+  />
+)}
       {children}
     </span>
   );

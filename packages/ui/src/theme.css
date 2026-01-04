@@ -1,8 +1,28 @@
+/**
+ * GreenScale Design System
+ * Path: packages/ui-library/src/theme.css
+ */
+
+/* 1. v4 Content Scanning
+   Explicitly tell Tailwind to scan the UI package and the apps for classes.
+   This resolves the issue where 'px-6', 'py-5', and 'w-1.5' are not working.
+*/
+@source "../../ui/src/**/*.{ts,tsx}";
+@source "../../../apps/client-portal/src/**/*.{ts,tsx}";
+
 @theme {
+  /* --- Spacing Scale --- */
+  --spacing-1: 0.25rem;
+  --spacing-1_5: 0.375rem; /* Fixes w-1.5 / h-1.5 */
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-5: 1.25rem;
+  --spacing-6: 1.5rem;
+
   /* --- Brand Colors: Emerald & Gold --- */
   --color-brand-emerald-50: #ecfdf5;
   --color-brand-emerald-100: #d1fae5;
-  --color-brand-emerald-200: #a7f3d0;
   --color-brand-emerald-500: #10b981;
   --color-brand-emerald-600: #059669;
   --color-brand-emerald-700: #047857;
@@ -20,9 +40,14 @@
   --color-slate-100: #f1f5f9;
   --color-slate-200: #e2e8f0;
   --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
   --color-slate-600: #475569;
   --color-slate-900: #0f172a;
+
+  /* --- Red Palette (Required for Alerts) --- */
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-500: #ef4444;
+  --color-red-700: #b91c1c;
 
   /* --- Typography --- */
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

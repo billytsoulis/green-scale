@@ -2,6 +2,12 @@
 
 import { ReactNode } from "react";
 
+/**
+ * GreenScale Shared Card Component
+ * Path: packages/ui/src/card.tsx
+ * * Luxury container for metrics, lists, and interactive sections.
+ */
+
 interface CardProps {
   children: ReactNode;
   title?: string;
@@ -35,29 +41,31 @@ export const Card = ({
     outline: "bg-transparent border border-slate-200 hover:border-emerald-200",
   };
 
+  const hasHeader = title || description;
+
   return (
     <div className={`${baseStyles} ${variants[variant]} ${className}`}>
-      {(title || description) && (
-        <div className="px-8 pt-8 pb-4">
+      {hasHeader && (
+        <div className="p-3 pt-4 pb-0 text-center">
           {title && (
-            <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
               {title}
             </h3>
           )}
           {description && (
-            <p className="text-sm font-medium text-slate-500 mt-1">
+            <p className="text-slate-500 mt-1">
               {description}
             </p>
           )}
         </div>
       )}
       
-      <div className="px-8 py-6">
+      <div className={`p-3 flex flex-col items-center text-center ${hasHeader ? "pt-1" : "pt-3"}`}>
         {children}
       </div>
 
       {footer && (
-        <div className="px-8 py-4 bg-slate-50/50 border-t border-slate-100">
+        <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100 text-center">
           {footer}
         </div>
       )}
