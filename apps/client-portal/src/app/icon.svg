@@ -1,0 +1,38 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Rounded Background Container for Luxury Feel -->
+  <rect width="32" height="32" rx="8" fill="#065f46"/>
+  
+  <!-- Sustainability Leaf Icon -->
+  <g transform="translate(4, 4) scale(1)">
+    <path 
+      d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 3.5 2 7a7 7 0 0 1-7 7c-1.07 0-3.2.39-3 2z" 
+      stroke="#10b981" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+    <path 
+      d="M11 20c-1.07 0-3.2.39-3 2" 
+      stroke="#10b981" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+    <path 
+      d="M11 20c0-1.07.39-3.2 2-3" 
+      stroke="#10b981" 
+      stroke-width="2" 
+      stroke-linecap="round" 
+      stroke-linejoin="round"
+    />
+  </g>
+  
+  <!-- Subtle Gradient Overlay -->
+  <defs>
+    <linearGradient id="paint0_linear" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop stop-color="white" stop-opacity="0.1"/>
+      <stop offset="1" stop-color="black" stop-opacity="0.1"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#paint0_linear)"/>
+</svg>
