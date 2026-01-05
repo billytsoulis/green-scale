@@ -84,3 +84,7 @@ check the standalone checkbox
 
 ## Test the data
 - npx tsx test-read.ts
+- pnpm --filter @repo/ui test
+- pnpm --filter client-portal test:e2e
+- pnpm --filter staff-dashboard test:e2e
+- pnpm --filter api-gateway test
