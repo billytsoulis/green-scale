@@ -2,80 +2,108 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 /**
- * GreenScale Auth Middleware - Stateless Proxy Implementation
+ * GreenScale Unified Middleware (SEO + Auth)
  * Path: apps/client-portal/src/middleware.ts
- * * This middleware intercepts requests to protected routes and verifies
- * the session by proxying the browser's cookies to the API Gateway.
+ * * Resolved: Infinite reload loop by strictly excluding Next.js internals and HMR.
  */
 
-export default async function authMiddleware(request: NextRequest) {
+const locales = ["en", "el"];
+const defaultLocale = "en";
+
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Environment Configuration
-  // We use the internal Gateway URL for server-to-server calls
-  const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3005";
-  const authUrl = `${AUTH_BASE_URL}/api/auth/get-session`;
-  
-  // 2. Cookie Extraction
-  // We pull the raw cookie string to proxy it exactly as the browser sent it
-  const cookieHeader = request.headers.get("cookie") || "";
-
-  // 3. Early Exit for Unauthenticated Users
-  // If the 'gs-auth' prefix isn't present, the user is definitely not logged in
-  if (!cookieHeader.includes("gs-auth")) {
-    console.log(`⚠️ [AUTH] No session cookies found for ${pathname}. Redirecting to /login`);
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  try {
-    /**
-     * 4. Session Verification via Gateway
-     * We send the entire Cookie header. This is critical because Better Auth 
-     * uses signed cookies (token + signature), and the Gateway needs the 
-     * full string to verify the authenticity of the session.
-     */
-    const response = await fetch(authUrl, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Cookie": cookieHeader,
-      },
-      // Ensure we don't cache an 'Unauthorized' result accidentally
-      cache: 'no-store'
-    });
-
-    // 5. Handle Gateway Errors (like the 500 error seen previously)
-    if (!response.ok) {
-        console.error(`❌ [AUTH] Gateway returned status ${response.status} for ${pathname}`);
-        // If the gateway is down or crashing, we redirect to login for safety
-        return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    const session = await response.json();
-
-    // 6. Final Validation
-    // Better Auth returns 'null' or an object without a user if the session is invalid
-    if (!session || !session.user) {
-      console.log(`🕵️ [AUTH] Invalid session returned by Gateway for ${pathname}.`);
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
-
-    // 7. Success: Access Granted
-    console.log(`✅ [AUTH] Access Granted for: ${session.user.email}`);
+  // --- 1. PROACTIVE EXCLUSION (Crucial to prevent infinite reloads) ---
+  // We must ignore all internal Next.js paths, HMR, and files with extensions
+  if (
+    pathname.startsWith('/_next') || 
+    pathname.startsWith('/api') ||
+    pathname.includes('/static') ||
+    pathname.includes('.') || // Catches .ico, .svg, .css, .js
+    pathname.includes('webpack-hmr') // Explicitly ignore Hot Module Replacement
+  ) {
     return NextResponse.next();
-
-  } catch (e) {
-    console.error("🔥 [AUTH] Critical Failure connecting to API Gateway:", e);
-    // On network failure, redirect to login
-    return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  // --- 2. Locale Redirection Logic ---
+  const pathnameIsMissingLocale = locales.every(
+    (locale) => !pathname.startsWith(`/${locale}/`) && pathname !== `/${locale}`
+  );
+
+  if (pathnameIsMissingLocale) {
+    const cookieLang = request.cookies.get("gs-lang")?.value;
+    const acceptLang = request.headers.get("accept-language")?.split(",")[0].split("-")[0];
+    
+    const locale = (cookieLang || acceptLang || defaultLocale) === "el" ? "el" : "en";
+
+    // Standard redirect: /about -> /en/about
+    // We use a 307 Temporary Redirect for development to avoid browser caching redirects
+    return NextResponse.redirect(
+      new URL(`/${locale}${pathname === "/" ? "" : pathname}`, request.url)
+    );
+  }
+
+  // --- 3. Authentication Guard Logic ---
+  // Matches [lang]/dashboard or [lang]/onboarding
+  const isProtectedRoute = pathname.match(/\/(en|el)\/(dashboard|onboarding)/);
+
+  if (isProtectedRoute) {
+    const AUTH_BASE_URL = process.env.NEXT_PUBLIC_AUTH_URL || "http://localhost:3005";
+    const authUrl = `${AUTH_BASE_URL}/api/auth/get-session`;
+    const cookieHeader = request.headers.get("cookie") || "";
+
+    // If no auth cookie, redirect to the localized login page
+    if (!cookieHeader.includes("gs-auth")) {
+      const lang = pathname.split("/")[1];
+      return NextResponse.redirect(new URL(`/${lang}/login`, request.url));
+    }
+
+    try {
+      const response = await fetch(authUrl, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+          "Cookie": cookieHeader,
+        },
+        cache: 'no-store'
+      });
+
+      if (!response.ok) {
+          const lang = pathname.split("/")[1];
+          return NextResponse.redirect(new URL(`/${lang}/login`, request.url));
+      }
+
+      const session = await response.json();
+
+      if (!session || !session.user) {
+        const lang = pathname.split("/")[1];
+        return NextResponse.redirect(new URL(`/${lang}/login`, request.url));
+      }
+
+      return NextResponse.next();
+
+    } catch (e) {
+      const lang = pathname.split("/")[1];
+      return NextResponse.redirect(new URL(`/${lang}/login`, request.url));
+    }
+  }
+
+  return NextResponse.next();
 }
 
 /**
  * Matcher Configuration
- * Defines which routes this middleware should protect.
- * We specifically target the dashboard and its sub-paths.
+ * This ensures the middleware is invoked for all routes except static assets.
  */
 export const config = {
-  matcher: ["/dashboard/:path*", "/dashboard"],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
 };

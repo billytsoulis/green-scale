@@ -1,0 +1,35 @@
+{
+"nav": {
+"about": "Σχετικά",
+"projects": "Έργα",
+"pricing": "Χρεώσεις",
+"methodology": "Μεθοδολογία",
+"contact": "Επικοινωνία",
+"login": "Σύνδεση",
+"getStarted": "Ξεκινήστε",
+"dashboard": "Πίνακας Ελέγχου"
+},
+"header": {
+"region": "Περιοχή: ΕΕ (Θεσσαλονίκη)"
+},
+"contact": {
+"title": "Ξεκινήστε τον",
+"accent": "Έλεγχο.",
+"description": "Προγραμματίστε μια εμπιστευτική συνάντηση με έναν Wealth Manager για να αξιολογήσετε την απόκλιση ESG του χαρτοφυλακίου σας."
+},
+"auth": {
+"login_title": "Καλώς Ήρθατε",
+"login_desc": "Συνδεθείτε στον πίνακα ελέγχου GreenScale",
+"register_title": "Εγγραφή στην GreenScale",
+"register_desc": "Δημιουργήστε το προφίλ βιώσιμου πλούτου σας",
+"email_label": "Διεύθυνση Email",
+"password_label": "Κωδικός Πρόσβασης",
+"name_label": "Ονοματεπώνυμο",
+"login_button": "Σύνδεση στην Πύλη",
+"register_button": "Εγγραφή ως Επενδυτής",
+"switch_to_register": "Νέος στην GreenScale;",
+"switch_to_login": "Έχετε ήδη λογαριασμό;",
+"link_register": "Δημιουργήστε λογαριασμό",
+"link_login": "Σύνδεση"
+}
+}

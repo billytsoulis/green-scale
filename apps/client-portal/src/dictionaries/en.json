@@ -1,0 +1,35 @@
+{
+"nav": {
+"about": "About Us",
+"projects": "Projects",
+"pricing": "Pricing",
+"methodology": "Methodology",
+"contact": "Contact Us",
+"login": "Login",
+"getStarted": "Get Started",
+"dashboard": "Go to Dashboard"
+},
+"header": {
+"region": "Region: EU (Thessaloniki)"
+},
+"contact": {
+"title": "Begin Your",
+"accent": "Audit.",
+"description": "Schedule a confidential consultation with a Wealth Manager to evaluate your current portfolio's ESG drift."
+},
+"auth": {
+"login_title": "Welcome Back",
+"login_desc": "Access your GreenScale dashboard",
+"register_title": "Join GreenScale",
+"register_desc": "Create your sustainable wealth profile",
+"email_label": "Email Address",
+"password_label": "Password",
+"name_label": "Full Name",
+"login_button": "Login to Portal",
+"register_button": "Register as Investor",
+"switch_to_register": "New to GreenScale?",
+"switch_to_login": "Already have an account?",
+"link_register": "Create an account",
+"link_login": "Log in"
+}
+}

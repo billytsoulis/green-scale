@@ -8,24 +8,29 @@ import React from "react";
  * * It ensures the Header and Footer are consistent across the site.
  */
 
-import { Header } from "../../components/landing/Header";
-import { Footer } from "../../components/shared/Footer";
+import { Header } from "@/components/landing/Header";
+import { Footer } from "@/components/shared/Footer";
 
 export default function MarketingLayout({
   children,
+  params,
 }: {
   children: React.ReactNode;
+  params: { lang: string };
 }) {
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* @ts-ignore - Header is shared across all marketing pages */}
+    <div className="flex flex-col min-h-screen" data-component="MarketingLayout">
+      {/* The Header and Footer will now be aware of the 'lang' param 
+        via the LanguageContext which is provided in the root [lang] layout.
+      */}
+      {/* @ts-ignore */}
       <Header />
       
       <main className="flex-1">
         {children}
       </main>
 
-      {/* @ts-ignore - Footer is shared across all marketing pages */}
+      {/* @ts-ignore */}
       <Footer />
     </div>
   );
