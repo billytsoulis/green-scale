@@ -19,7 +19,7 @@ export const Hero = () => {
   };
 
   return (
-    <section className="min-h-[85vh] flex items-center justify-center bg-[#FEFCF3] relative overflow-hidden pt-20">
+    <section data-component="Hero" className="min-h-[85vh] flex items-center justify-center bg-[#FEFCF3] relative overflow-hidden pt-20">
       {/* Dynamic Background Glows */}
       <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-brand-emerald-50/50 rounded-full blur-[120px] -mr-64 -mt-64" />
       <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-brand-gold-50/30 rounded-full blur-[100px] -ml-32 -mb-32" />

@@ -17,10 +17,11 @@ export const Header = () => {
     { label: "Projects", href: "/projects" },
     { label: "Pricing", href: "/pricing" },
     { label: "Methodology", href: "/methodology" },
+    { label: "Contact Us", href: "/contact" },
   ];
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/70 backdrop-blur-md border-b border-slate-100">
+    <header data-component="Header" className="sticky top-0 z-50 w-full bg-white/70 backdrop-blur-md border-b border-slate-100">
       <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo */}
         <a href="/" className="flex items-center gap-3 group">

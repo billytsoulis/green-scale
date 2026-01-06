@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-// import { Header } from "../../components/landing/Header";
-// import { Footer } from "../../components/shared/Footer";
-// import { Hero } from "../../components/landing/Hero";
-// import { ImpactTicker } from "../../components/landing/ImpactTicker";
-// import { ESGPillars } from "../../components/landing/ESGPillars";
-// import { FeaturedProjects } from "../../components/landing/FeaturedProjects";
+import { Header } from "../../components/landing/Header";
+import { Footer } from "../../components/shared/Footer";
+import { Hero } from "../../components/landing/Hero";
+import { ImpactTicker } from "../../components/landing/ImpactTicker";
+import { ESGPillars } from "../../components/landing/ESGPillars";
+import { FeaturedProjects } from "../../components/landing/FeaturedProjects";
 
 /**
  * GreenScale Marketing Home Page

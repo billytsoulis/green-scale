@@ -34,7 +34,7 @@ export const ESGPillars = () => {
   ];
 
   return (
-    <section className="py-32 bg-white relative">
+    <section data-component="ESGPillars" className="py-32 bg-white relative">
       <div className="max-w-7xl mx-auto px-8">
         <div className="text-center max-w-3xl mx-auto mb-20 space-y-4">
           <h2 className="text-xs font-black text-brand-emerald-600 uppercase tracking-[0.4em]">Our Proprietary Engine</h2>

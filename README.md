@@ -91,3 +91,5 @@ check the standalone checkbox
 
 ## Isolalate the tests example
 - pnpm --filter @repo/ui test -- Badge
+
+Now we have implement the landing page, the about us and the contact page

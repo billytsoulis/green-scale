@@ -7,24 +7,26 @@
 
 /* 3. Global Spacing & Theme Fixes */
 @theme {
-  /* Tailwind v4 Spacing Resolution:
-     Utilities with fractions (like .5, 1.5, 2.5) map to CSS variables using underscores.
-     We explicitly define --spacing-1_5 to ensure 'w-1.5' and 'h-1.5' generate 6px.
-  */
   --spacing-1_5: 0.375rem; 
 
-  /* Fallback colors to ensure the status dots are visible even if theme.css 
-     is still propagating or being cached.
-  */
-  --color-red-500: #ef4444;
-  --color-slate-400: #94a3b8;
+  /* Fallback brand colors */
   --color-brand-emerald-500: #10b981;
   --color-brand-gold-500: #f59e0b;
+
+  /* --- Marquee Animation (Moved from styled-jsx to Global Theme) --- */
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
 }
 
 /* 4. App-Specific Utilities */
 @layer utilities {
-  /* Custom scrollbar matching the minimalist GreenScale aesthetic */
+  .animate-marquee {
+    /* Standardized 40s duration for a smooth, high-end feel */
+    animation: marquee 40s linear infinite;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -38,7 +40,6 @@
     @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
   }
 
-  /* Text balance for luxury typography in headers */
   .text-balance {
     text-wrap: balance;
   }
