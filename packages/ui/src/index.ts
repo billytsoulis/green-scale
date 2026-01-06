@@ -4,13 +4,13 @@
  */
 
 // Atomic Components
-export * from "./button";
-export * from "./card";
-export * from "./input";
-export * from "./modal";
-export * from "./badge";
+export * from "./Button/Button";
+export * from "./Card/Card";
+export * from "./Input/Input";
+export * from "./Modal/Modal";
+export * from "./Badge/Badge";
 
 // Complex Modules
 export * from "./icons";
 export * from "./table";
-export * from "./auth-layout";
+export * from "./AuthLayout/AuthLayout";

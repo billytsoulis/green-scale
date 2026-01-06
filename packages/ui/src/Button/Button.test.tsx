@@ -18,7 +18,7 @@ import React from "react";
 */
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-import { Button } from "./button";
+import { Button } from "./Button";
 
 /**
  * @ts-ignore - describe is provided globally by Vitest
