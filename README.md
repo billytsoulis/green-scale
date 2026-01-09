@@ -93,3 +93,8 @@ check the standalone checkbox
 - pnpm --filter @repo/ui test -- Badge
 
 Now we have implement the landing page, the about us and the contact page
+
+## Check for Port Conflicts (dev only)
+- lsof -i :3000 then kill -9 <PID>
+- lsof -i :5173 then kill -9 <PID>
+- lsof -i :3005 then kill -9 <PID>

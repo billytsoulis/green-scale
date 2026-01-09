@@ -11,7 +11,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules pnpm-lock.yaml"
   },
   "dependencies": {
     "dotenv": "16.4.7"
@@ -24,6 +24,7 @@
   },
   "pnpm": {
     "overrides": {
+      "drizzle-orm": "0.41.0",
       "esbuild": "0.23.1",
       "@esbuild-kit/core-utils": "npm:@sxzz/core-utils@latest",
       "@esbuild-kit/esm-loader": "npm:tsx@latest"

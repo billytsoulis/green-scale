@@ -1,6 +1,7 @@
 {
   "name": "@greenscale/database",
   "version": "0.1.0",
+  "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
   "scripts": {
@@ -9,12 +10,12 @@
     "db:seed": "tsx seed.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.38.3",
+    "drizzle-orm": "0.41.0",
     "postgres": "3.4.5",
     "dotenv": "16.4.7"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.4",
+    "drizzle-kit": "0.31.4",
     "tsx": "4.19.2",
     "typescript": "5.7.2",
     "@types/node": "22.10.2"

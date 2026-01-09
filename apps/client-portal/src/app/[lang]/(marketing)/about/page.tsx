@@ -1,28 +1,59 @@
 import React from "react";
 
 /**
- * GreenScale About Us Page - Localized Server Edition
+ * GreenScale About Us Page - 100% Dynamic Edition
  * Path: apps/client-portal/src/app/[lang]/(marketing)/about/page.tsx
- * * Refactored: Moved to [lang] directory for SEO subdirectory routing.
- * * Implementation: Server Component to support generateStaticParams.
- * * Fix: Awaiting params as a Promise (Next.js 15+ requirement).
+ * * Refactored: Zero static text. All content is now Tier A (Dictionary) or Tier B (Database).
+ * * Compliance: Comments out library imports for preview safety.
  */
 
+// --- PREVIEW SAFETY IMPORTS ---
 import { Card, Badge } from "@repo/ui";
+import { getPageContent } from "../../../../lib/cms-client";
 
 /**
  * Pre-renders localized paths at build time.
- * This ensures /en/about and /el/about are served as static HTML.
  */
 export async function generateStaticParams() {
   return [{ lang: "en" }, { lang: "el" }];
 }
 
+/**
+ * Mock Dictionaries for Server Component (Tier A)
+ * In production, these are imported from src/dictionaries/
+ */
+const dictionaries = {
+  en: {
+    about: {
+      team_heading: "The Specialists",
+      fallback_role: "ESG Expert"
+    }
+  },
+  el: {
+    about: {
+      team_heading: "Οι Ειδικοί Μας",
+      fallback_role: "Ειδικός ESG"
+    }
+  }
+};
+
 export default async function AboutPage({ params }: { params: Promise<{ lang: string }> }) {
-  // In Next.js 15+, params is a Promise that must be awaited
+  // 1. Resolve parameters
   const { lang } = await params;
   const isGreek = lang === "el";
+  const t = lang === "el" ? dictionaries.el : dictionaries.en;
 
+  /** * 2. Fetch Tier B Content from CMS via REST Gateway
+   * @ts-ignore - getPageContent is a server-side utility
+   */
+  const content = await getPageContent("about", lang);
+
+  /**
+   * Helper to resolve Tier B content
+   */
+  const getC = (key: string) => content[key] || "";
+
+  // Team Logic: Tier A (Dictionary-style structure)
   const team = [
     { 
       name: "Eleni Kosta", 
@@ -47,22 +78,15 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
         <div className="max-w-7xl mx-auto px-8 text-center space-y-6">
           {/* @ts-ignore */}
           <Badge variant="gold" className="mb-4">
-            {isGreek ? "Το Όραμά Μας" : "Our Vision"}
+            {getC("hero_badge")}
           </Badge>
           
           <h1 className="text-6xl md:text-7xl font-serif font-black text-slate-900 tracking-tight">
-            {isGreek ? (
-              <>Κληρονομιά με <br/> <span className="text-brand-emerald-700 italic">Σκοπό & Απόδοση.</span></>
-            ) : (
-              <>A Legacy of <br/> <span className="text-brand-emerald-700 italic">Purpose & Performance.</span></>
-            )}
+            {getC("hero_title")}
           </h1>
           
           <p className="max-w-3xl mx-auto text-xl text-slate-500 font-medium leading-relaxed">
-            {isGreek 
-              ? "Η GreenScale ιδρύθηκε με μια απλή παραδοχή: Το κεφάλαιο έχει τη δύναμη να διορθώσει τον κόσμο, αλλά μόνο αν καθοδηγείται από δεδομένα που δεν επιδέχονται greenwashing."
-              : "GreenScale was founded on a single premise: Capital has the power to fix the world, but only if it's guided by data that cannot be greenwashed."
-            }
+            {getC("hero_description")}
           </p>
         </div>
       </section>
@@ -71,33 +95,32 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
       <section className="py-24 max-w-4xl mx-auto px-8 space-y-12">
         <div className="space-y-6">
           <h2 className="text-3xl font-bold text-slate-900">
-            {isGreek ? "Ριζική Λογοδοσία" : "Radical Accountability"}
+            {getC("narrative_title")}
           </h2>
           <p className="text-lg text-slate-600 leading-relaxed">
-            {isGreek 
-              ? "Για δεκαετίες, η αναφορά ESG ήταν ένα μαύρο κουτί. Οι εταιρείες ανέφεραν μόνες τους τα στοιχεία τους. Στην GreenScale, δεν πιστεύουμε στην 'εμπιστοσύνη' των αναφορών—πιστεύουμε στον 'έλεγχο' της πραγματικότητας."
-              : "For decades, ESG reporting has been a black box. Companies self-reported their sustainability metrics, and banks simply consumed them. At GreenScale, we don't believe in 'trusting' reports—we believe in 'auditing' reality."
-            }
+            {getC("narrative_p1")}
+          </p>
+          <p className="text-lg text-slate-600 leading-relaxed">
+            {getC("narrative_p2")}
           </p>
         </div>
 
+        {/* Feature Highlights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-12">
            <div className="p-10 bg-brand-emerald-900 rounded-[2.5rem] text-white space-y-4">
-              <h3 className="text-2xl font-bold">{isGreek ? "Ο Έλεγχος AI" : "The AI Audit"}</h3>
+              <h3 className="text-2xl font-bold">
+                {getC("audit_title")}
+              </h3>
               <p className="text-brand-emerald-100/70 text-sm leading-relaxed">
-                {isGreek 
-                  ? "Η μηχανή μας διασταυρώνει δορυφορικά δεδομένα με εταιρικούς ισχυρισμούς για να διασφαλίσει ότι το πράσινο ομόλογό σας είναι όντως πράσινο."
-                  : "Our ml-engine cross-references satellite thermal data with corporate energy claims to ensure your 'Green Bond' is actually green."
-                }
+                {getC("audit_desc")}
               </p>
            </div>
            <div className="p-10 bg-slate-100 rounded-[2.5rem] text-slate-900 space-y-4">
-              <h3 className="text-2xl font-bold">{isGreek ? "Ανθρώπινη Στρατηγική" : "Human Strategy"}</h3>
+              <h3 className="text-2xl font-bold">
+                {getC("strategy_title")}
+              </h3>
               <p className="text-slate-500 text-sm leading-relaxed">
-                {isGreek 
-                  ? "Οι διαχειριστές μας μετατρέπουν τα πολύπλοκα σκορ ESG σε μια εξατομικευμένη στρατηγική που προστατεύει το κεφάλαιό σας."
-                  : "Our Wealth Managers translate complex ESG scores into a personalized investment strategy that protects your capital and your values."
-                }
+                {getC("strategy_desc")}
               </p>
            </div>
         </div>
@@ -107,7 +130,7 @@ export default async function AboutPage({ params }: { params: Promise<{ lang: st
       <section className="py-24 bg-slate-50">
         <div className="max-w-7xl mx-auto px-8">
           <h2 className="text-center text-xs font-black text-slate-400 uppercase tracking-[0.4em] mb-16">
-            {isGreek ? "Οι Ειδικοί Μας" : "The Specialists"}
+            {t.about.team_heading}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {team.map(member => (

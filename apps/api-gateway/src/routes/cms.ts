@@ -7,14 +7,13 @@ import redis from "../lib/redis";
  * GreenScale CMS API Routes
  * Path: apps/api-gateway/src/routes/cms.ts
  * * Implements Tier B translation with Redis caching.
- * * Fixed: Imported eq and and from drizzle-orm directly.
  */
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * GET /api/cms/:pageId
- * Fetches all content blocks for a specific page.
+ * Fetches all content blocks for a page, with a Redis cache-aside layer.
  */
 router.get("/:pageId", async (req, res) => {
   const { pageId } = req.params;
@@ -22,24 +21,24 @@ router.get("/:pageId", async (req, res) => {
   const redisKey = `cms:${pageId}:${lang}`;
 
   try {
-    // 1. Try to fetch from Redis Cache
+    // 1. Check Redis Cache
     const cachedData = await redis.get(redisKey);
     if (cachedData) {
       return res.json(JSON.parse(cachedData));
     }
 
-    // 2. Fetch from PostgreSQL if Cache Miss
+    // 2. Cache Miss: Fetch from PostgreSQL using Drizzle Relational API
     const blocks = await db.query.contentBlocks.findMany({
-      where: eq(schema.contentBlocks.pageId, pageId),
+      where: (contentBlocks: any, { eq }: any) => eq(contentBlocks.pageId, pageId),
     });
 
-    // 3. Transform to a flat key-value object based on requested lang
-    const contentMap = blocks.reduce((acc, block) => {
+    // 3. Map language-specific content
+    const contentMap = blocks.reduce((acc: any, block: any) => {
       acc[block.sectionId] = lang === "el" ? block.contentEl : block.contentEn;
       return acc;
     }, {} as Record<string, string>);
 
-    // 4. Update Redis (TTL 24 hours)
+    // 4. Hydrate Cache (TTL: 24 hours)
     await redis.set(redisKey, JSON.stringify(contentMap), "EX", 86400);
 
     return res.json(contentMap);
@@ -51,13 +50,14 @@ router.get("/:pageId", async (req, res) => {
 
 /**
  * PATCH /api/cms/:pageId/:sectionId
- * Updates a specific content block and flushes cache.
+ * Updates a specific block and invalidates the Redis cache for that page.
  */
 router.patch("/:pageId/:sectionId", async (req, res) => {
   const { pageId, sectionId } = req.params;
   const { contentEn, contentEl } = req.body;
 
   try {
+    // 1. Update Database
     await db.update(schema.contentBlocks)
       .set({
         contentEn,
@@ -71,11 +71,11 @@ router.patch("/:pageId/:sectionId", async (req, res) => {
         )
       );
 
-    // CRITICAL: Flush Redis cache for both languages to ensure immediate update
+    // 2. Invalidate Cache for both languages to ensure consistency
     await redis.del(`cms:${pageId}:en`);
     await redis.del(`cms:${pageId}:el`);
 
-    return res.json({ success: true, message: `Block ${sectionId} updated.` });
+    return res.json({ success: true, message: `Block ${sectionId} updated and cache cleared.` });
   } catch (error) {
     console.error("❌ [CMS-API] Update failed:", error);
     return res.status(500).json({ error: "Failed to update content." });

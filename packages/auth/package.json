@@ -1,10 +1,12 @@
 {
   "name": "@greenscale/auth",
   "version": "0.1.0",
+  "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
   "dependencies": {
+    "@greenscale/database": "workspace:*",
     "better-auth": "1.1.13",
-    "@greenscale/database": "workspace:*"
+    "drizzle-orm": "0.41.0"
   }
 }
