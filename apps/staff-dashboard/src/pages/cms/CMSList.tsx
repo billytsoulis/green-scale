@@ -1,61 +1,172 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { FileText, Globe, Settings, ExternalLink, Plus, Layout, ArrowRight, Loader2 } from "lucide-react";
+import { Button, Card, Badge } from "@repo/ui";
 
 /**
- * Staff Dashboard - CMS Page Directory
+ * Page Manager (Layer 1)
  * Path: apps/staff-dashboard/src/pages/cms/CMSList.tsx
- * * Lists all high-level marketing pages for localized content editing.
+ * * Fix: Resolved 'import.meta' error for compatibility with older target environments.
+ * * Function: Dynamic list fetched from the marketing_pages table.
  */
 
-// Preview Safety: No shared UI imports currently used in this specific file,
-// but adding the template for future use.
-import { Badge, Card } from "@repo/ui";
-
-const pages = [
-  { id: "home", name: "Marketing Home", sections: 8, lastUpdate: "Active" },
-  { id: "about", name: "About GreenScale", sections: 4, lastUpdate: "Active" },
-  { id: "pricing", name: "Pricing Strategy", sections: 6, lastUpdate: "Draft" },
-  { id: "contact", name: "Lead Generation", sections: 2, lastUpdate: "Active" },
-];
+interface MarketingPage {
+  id: string;
+  slug: string;
+  title: string;
+  isNavItem: boolean;
+  updatedAt: string;
+}
 
 export default function CMSList() {
+  const [pages, setPages] = useState<MarketingPage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Safe retrieval of the Gateway URL.
+   * Uses cast to 'any' to avoid compilation errors in environments 
+   * that do not support import.meta directly.
+  */
+  const getGatewayUrl = () => {
+    try {
+      const meta = import.meta as any;
+      if (meta?.env?.VITE_API_URL) {
+        return meta.env.VITE_API_URL;
+      }
+    } catch (e) {
+      // Fallback στην προεπιλεγμένη θύρα
+    }
+    return "http://localhost:3005";
+  };
+
+  const gatewayUrl = getGatewayUrl();
+
+  useEffect(() => {
+    const fetchPages = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${gatewayUrl}/api/cms/pages`);
+        if (!response.ok) throw new Error("Αδυναμία σύνδεσης στη βάση δεδομένων CMS.");
+        const data = await response.json();
+        setPages(data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPages();
+  }, [gatewayUrl]);
+
+  if (loading) {
+    return (
+      <div className="h-96 flex flex-col items-center justify-center gap-4 text-slate-400">
+        {/* @ts-ignore */}
+        <Loader2 className="animate-spin" size={40} />
+        <p className="font-bold tracking-widest uppercase text-[10px]">Συγχρονισμός Καταλόγου Σελίδων...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex justify-between items-end">
-        <div className="space-y-1">
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Content Management</h2>
-          <p className="text-slate-500 font-medium text-lg">Select a page to modify its bilingual marketing blocks.</p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+             <h2 className="text-5xl font-black text-slate-900 tracking-tight">Περιεχόμενο</h2>
+             {/* @ts-ignore */}
+             <Badge variant="gold" size="sm" className="mt-2">v2.0 Αρθρωτό</Badge>
+          </div>
+          <p className="text-slate-500 font-medium text-xl">Διαχειριστείτε το δίγλωσσο οικοσύστημα μάρκετινγκ.</p>
         </div>
+        
+        {/* @ts-ignore */}
+        <Button className="!rounded-[1.5rem] !bg-brand-emerald-800 !px-8 !py-6 shadow-xl shadow-emerald-900/20 flex items-center gap-3 hover:scale-105 transition-transform">
+          {/* @ts-ignore */}
+          <Plus size={20} />
+          <span className="font-bold">Δημιουργία Σελίδας</span>
+        </Button>
       </header>
+
+      {error && (
+        <div className="p-6 bg-red-50 border border-red-100 rounded-[2rem] text-red-600 flex items-center gap-4">
+          <span className="text-2xl">⚠️</span>
+          <div>
+            <p className="font-black uppercase text-xs tracking-widest">Σφάλμα Σύνδεσης</p>
+            <p className="font-medium">{error}</p>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {pages.map((page) => (
-          <Link 
-            key={page.id}
-            to={`/cms/${page.id}`}
-            className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all group"
-          >
-            <div className="flex justify-between items-start mb-8">
-              <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-black group-hover:bg-emerald-600 group-hover:text-white transition-all">
-                {page.id[0].toUpperCase()}
+          /* @ts-ignore */
+          <Card key={page.id} className="group p-0 rounded-[2.5rem] border-slate-100 bg-white overflow-hidden hover:shadow-2xl hover:border-brand-emerald-100 transition-all duration-500">
+            <div className="p-8 space-y-6">
+              <div className="flex justify-between items-start">
+                <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-brand-emerald-50 group-hover:text-brand-emerald-600 transition-all duration-500">
+                  {/* @ts-ignore */}
+                  <FileText size={32} />
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  {page.isNavItem && (
+                    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+                      {/* @ts-ignore */}
+                      <Globe size={12} /> Στο Μενού
+                    </span>
+                  )}
+                  {/* @ts-ignore */}
+                  <Badge variant="outline" className="opacity-50 text-[10px]">ID: {page.id.slice(0, 8)}</Badge>
+                </div>
               </div>
-              <div className="px-3 py-1 bg-slate-50 text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-full">
-                {page.sections} Sections
+
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight group-hover:text-brand-emerald-700 transition-colors">{page.title}</h3>
+                <p className="text-slate-400 font-mono text-sm mt-1">/{page.slug}</p>
               </div>
-            </div>
-            
-            <h3 className="text-2xl font-black text-slate-900 mb-2">{page.name}</h3>
-            <div className="flex items-center gap-2">
-               <span className={`w-1.5 h-1.5 rounded-full ${page.lastUpdate === 'Active' ? 'bg-emerald-500' : 'bg-orange-400'}`} />
-               <p className="text-xs font-bold text-slate-400 uppercase tracking-tight">Status: {page.lastUpdate}</p>
+
+              <div className="flex gap-2 pt-2">
+                 {/* @ts-ignore */}
+                 <Link to={`/cms/${page.slug}/layout`} className="flex-1">
+                   {/* @ts-ignore */}
+                   <Button variant="outline" className="w-full !rounded-xl !py-5 !border-slate-100 group-hover:!border-brand-emerald-200 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500 group-hover:text-brand-emerald-700">
+                     {/* @ts-ignore */}
+                     <Layout size={14} /> Διάταξη
+                   </Button>
+                 </Link>
+                 {/* @ts-ignore */}
+                 <Link to={`/cms/${page.slug}/settings`}>
+                   {/* @ts-ignore */}
+                   <Button variant="ghost" className="!p-4 !rounded-xl text-slate-300 hover:text-slate-600">
+                     {/* @ts-ignore */}
+                     <Settings size={20} />
+                   </Button>
+                 </Link>
+              </div>
             </div>
 
-            <div className="mt-10 flex justify-between items-center text-emerald-600 font-black text-xs uppercase tracking-widest">
-              <span>Open Terminal Editor</span>
-              <span className="group-hover:translate-x-1 transition-transform">→</span>
-            </div>
-          </Link>
+            <a 
+              href={`http://localhost:3000/el/${page.slug}?nocache=true`} 
+              target="_blank" 
+              rel="noreferrer"
+              className="block w-full py-4 bg-slate-50 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 hover:bg-brand-emerald-600 hover:text-white transition-all border-t border-slate-50"
+            >
+              Προβολή Live Portal <span className="ml-1 inline-block group-hover:translate-x-1 transition-transform">→</span>
+            </a>
+          </Card>
         ))}
+
+        {/* Placeholder Δημιουργίας */}
+        {/* @ts-ignore */}
+        <button className="border-2 border-dashed border-slate-100 rounded-[2.5rem] p-8 flex flex-col items-center justify-center gap-4 text-slate-300 hover:border-brand-emerald-200 hover:text-brand-emerald-400 transition-all group">
+          <div className="w-16 h-16 rounded-full border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
+             {/* @ts-ignore */}
+             <Plus size={32} />
+          </div>
+          <span className="font-black uppercase tracking-widest text-xs">Καταχώρηση Νέας Σελίδας</span>
+        </button>
       </div>
     </div>
   );

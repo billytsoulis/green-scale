@@ -4,18 +4,33 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 /**
  * Staff Dashboard Application Router
  * Path: apps/staff-dashboard/src/App.tsx
- * * FIXED: Added dynamic route for /cms/:pageId to prevent dashboard redirects.
+ * * UPDATED: Integrated Modular CMS Routes (GS-17).
+ * * Architecture: Supports Directory (L1), Layout (L2), and Block Editors (L3).
  */
 
-// Preview Safety: Commenting out local/shared imports
-/*
-*/
+// --- PREVIEW SAFETY IMPORTS ---
 import StaffLoginPage from "./pages/login";
 import StaffDashboard from "./pages/dashboard";
 import CMSList from "./pages/cms/CMSList";
-import CMSEditor from "./pages/cms/CMSEditor";
+import LayoutCanvas from "./pages/cms/LayoutBuilder/LayoutCanvas";
+import PageSettings from "./pages/cms/PageManager/PageSettings";
+import BlockEditorSwitcher from "./pages/cms/BlockEditors/BlockEditorSwitcher";
 import { StaffLayout } from "./layout/StaffLayout";
 import { authClient } from "./lib/auth-client";
+
+// Mock components for environment safety if imports are not yet resolved
+// const StaffLoginPage = () => <div>Login Page</div>;
+// const StaffDashboard = () => <div>Dashboard</div>;
+// const StaffLayout = () => <div className="p-10">Layout Wrapper (Outlet)</div>;
+// const CMSList = () => <div>CMS List</div>;
+// const LayoutCanvas = () => <div>Layout Canvas</div>;
+// const PageSettings = () => <div>Page Settings</div>;
+// const BlockEditorSwitcher = () => <div>Block Editor Switcher</div>;
+
+// authClient mock
+// const authClient = { 
+//   useSession: () => ({ data: { user: { id: "1" } }, isPending: false }) 
+// };
 
 function App() {
   /** @ts-ignore - authClient handled in production */
@@ -46,16 +61,22 @@ function App() {
           /* @ts-ignore */
           element={session ? <StaffLayout /> : <Navigate to="/login" replace />}
         >
-          {/* Dashboard View */}
+          {/* Dashboard Home */}
           <Route path="/dashboard" element={<StaffDashboard />} />
           
-          {/* CMS Directory View */}
+          {/* Layer 1: CMS Page Directory */}
           <Route path="/cms" element={<CMSList />} />
           
-          {/* FIXED: Dynamic Page Editor Route */}
-          <Route path="/cms/:pageId" element={<CMSEditor />} />
+          {/* Layer 1: Page Settings (SEO/Metadata) */}
+          <Route path="/cms/:slug/settings" element={<PageSettings />} />
+
+          {/* Layer 2: Visual Layout Builder (Reordering Blocks) */}
+          <Route path="/cms/:slug/layout" element={<LayoutCanvas />} />
+
+          {/* Layer 3: Individual Block Editor (Bilingual Content) */}
+          <Route path="/cms/:slug/edit/:sectionId" element={<BlockEditorSwitcher />} />
           
-          {/* Default Route within Layout */}
+          {/* Redirect empty paths to dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
 

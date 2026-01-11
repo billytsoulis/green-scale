@@ -28,6 +28,9 @@
       "esbuild": "0.23.1",
       "@esbuild-kit/core-utils": "npm:@sxzz/core-utils@latest",
       "@esbuild-kit/esm-loader": "npm:tsx@latest"
+    },
+    "allowedDeprecatedVersions": {
+      "lodash.isequal": "4.5.0"
     }
   }
 }

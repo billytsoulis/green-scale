@@ -1,24 +1,43 @@
-import { pgTable, text, timestamp, serial, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, uuid, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 
 /**
- * Hybrid CMS Content Schema
+ * Modular CMS Schema - GS-17 (Refined with JSONB)
  * Path: packages/database/schema/cms.ts
- * * Updated: Added a uniqueIndex on [pageId, sectionId].
- * * Requirement: This is mandatory for the 'onConflictDoUpdate' logic in seed scripts.
+ * Logic: 
+ * - marketingPages: High-level route definition.
+ * - pageSections: Direct block-based storage using JSONB for content.
+ * This replaces the sectionContent table for better scalability.
  */
 
-export const contentBlocks = pgTable("content_blocks", {
-  id: serial("id").primaryKey(),
-  pageId: text("page_id").notNull(), 
-  sectionId: text("section_id").notNull(), 
-  contentEn: text("content_en").notNull(),
-  contentEl: text("content_el").notNull(),
+// 1. Marketing Pages - The high-level route container
+export const marketingPages = pgTable("marketing_pages", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  slug: text("slug").notNull().unique(), // e.g., "about-us"
+  title: text("title").notNull(), // Administrative title
+  seoMetadata: jsonb("seo_metadata").$type<{
+    description?: string;
+    keywords?: string[];
+    ogImage?: string;
+  }>().default({}),
+  isNavItem: boolean("is_nav_item").default(false).notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => [
+});
+
+// 2. Page Sections - The layout orchestrator and data container
+export const pageSections = pgTable("page_sections", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  pageId: uuid("page_id").notNull().references(() => marketingPages.id, { onDelete: 'cascade' }),
+  type: text("type").notNull(), // e.g., "HERO", "NARRATIVE", "TEAM_GRID"
+  orderIndex: integer("order_index").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  
   /**
-   * The seed script uses 'onConflictDoUpdate' targeting these columns.
-   * A Unique Index ensures the database can identify conflicts and update
-   * instead of throwing duplicate key errors.
+   * JSONB Content Storage
+   * Each block type (Hero, Team, etc.) defines its own schema within these objects.
+   * This allows "TEAM_GRID" to store an array of members while "HERO" stores a title/badge.
    */
-  uniqueIndex("cms_page_section_unique_idx").on(table.pageId, table.sectionId),
-]);
+  contentEn: jsonb("content_en").$type<any>().default({}).notNull(),
+  contentEl: jsonb("content_el").$type<any>().default({}).notNull(),
+  
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});

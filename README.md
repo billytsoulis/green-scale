@@ -81,6 +81,7 @@ check the standalone checkbox
 - pnpm db:generate
 - pnpm db:push
 - pnpm db:seed || pnpm --filter @greenscale/database db:seed
+- pnpm db:seed-cms || pnpm --filter @greenscale/database db:seed-cms
 
 ## Test the data
 - npx tsx test-read.ts

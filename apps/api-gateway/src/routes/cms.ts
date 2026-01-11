@@ -1,99 +1,137 @@
 import { Router } from "express";
 import { db, schema } from "@greenscale/database";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import redis from "../lib/redis";
 
 /**
- * GreenScale CMS API Routes
+ * GreenScale CMS API Routes (Modular JSONB Architecture)
  * Path: apps/api-gateway/src/routes/cms.ts
- * * Updated: Added 'nocache' support for development and fixed the cache-first logic.
+ * * Updated: Refactored to handle marketingPages and pageSections with JSONB content.
+ * * Logic: Efficient fetching of layouts and granular block updates.
  */
 
 const router: Router = Router();
 
 /**
- * GET /api/cms/:pageId
- * Public endpoint: Returns a localized key-value map for the Client Portal.
+ * GET /api/cms/pages
+ * Returns the list of all marketing pages for Layer 1 directory.
  */
-router.get("/:pageId", async (req, res) => {
-  const { pageId } = req.params;
-  const lang = (req.query.lang as string) || "en";
-  
-  // Logic: 'admin' returns raw blocks, 'nocache' skips Redis
-  const isAdmin = req.query.admin === "true";
-  const noCache = req.query.nocache === "true"; 
-  const redisKey = `cms:${pageId}:${lang}`;
-
+router.get("/pages", async (req, res) => {
   try {
-    // 1. Check Redis Cache (Skip if isAdmin or noCache is requested)
-    if (!isAdmin && !noCache) {
-      const cachedData = await redis.get(redisKey);
-      if (cachedData) {
-        const parsed = JSON.parse(cachedData);
-        // Debug log to terminal
-        console.log(`[CMS-API] Serving ${pageId}:${lang} from Redis (${Object.keys(parsed).length} keys)`);
-        return res.json(parsed);
-      }
-    }
-
-    // 2. Fetch from PostgreSQL
-    console.log(`[CMS-API] Cache miss or bypass. Fetching ${pageId} from PostgreSQL...`);
-    const blocks = await db.query.contentBlocks.findMany({
-      where: (contentBlocks: any, { eq }: any) => eq(contentBlocks.pageId, pageId),
-    });
-
-    // 3. Admin Response: Return the full block objects
-    if (isAdmin) {
-      return res.json(blocks);
-    }
-
-    // 4. Public Response: Map language-specific content
-    const contentMap = blocks.reduce((acc: any, block: any) => {
-      acc[block.sectionId] = lang === "el" ? block.contentEl : block.contentEn;
-      return acc;
-    }, {} as Record<string, string>);
-
-    // 5. Hydrate Cache (TTL: 24 hours)
-    if (blocks.length > 0) {
-      await redis.set(redisKey, JSON.stringify(contentMap), "EX", 86400);
-      console.log(`[CMS-API] Cache hydrated for ${pageId}:${lang} with ${blocks.length} blocks.`);
-    }
-
-    return res.json(contentMap);
+    const pages = await db.select().from(schema.marketingPages);
+    return res.json(pages);
   } catch (error) {
-    console.error(`❌ [CMS-API] Error fetching page ${pageId}:`, error);
-    return res.status(500).json({ error: "Failed to fetch content." });
+    console.error("❌ [CMS-API] Failed to fetch pages:", error);
+    return res.status(500).json({ error: "Failed to fetch page list." });
   }
 });
 
 /**
- * PATCH /api/cms/:pageId/:sectionId
+ * GET /api/cms/layout/:slug
+ * Returns the full layout for a page including all ordered sections and content.
+ * Used by both LayoutCanvas (Layer 2) and Client Portal.
  */
-router.patch("/:pageId/:sectionId", async (req, res) => {
-  const { pageId, sectionId } = req.params;
+router.get("/layout/:slug", async (req, res) => {
+  const { slug } = req.params;
+  const noCache = req.query.nocache === "true";
+  const redisKey = `cms:layout:${slug}`;
+
+  try {
+    // 1. Check Redis for public-facing requests
+    if (!noCache) {
+      const cached = await redis.get(redisKey);
+      if (cached) return res.json(JSON.parse(cached));
+    }
+
+    // 2. Resolve Page
+    const [page] = await db.select()
+      .from(schema.marketingPages)
+      .where(eq(schema.marketingPages.slug, slug));
+
+    if (!page) return res.status(404).json({ error: "Page not found" });
+
+    // 3. Fetch Ordered Sections
+    const sections = await db.select()
+      .from(schema.pageSections)
+      .where(eq(schema.pageSections.pageId, page.id))
+      .orderBy(asc(schema.pageSections.orderIndex));
+
+    const response = {
+      page,
+      sections
+    };
+
+    // 4. Cache the result for 1 hour if not bypass
+    if (!noCache) {
+      await redis.set(redisKey, JSON.stringify(response), "EX", 3600);
+    }
+
+    return res.json(response);
+  } catch (error) {
+    console.error(`❌ [CMS-API] Error fetching layout for ${slug}:`, error);
+    return res.status(500).json({ error: "Failed to fetch page layout." });
+  }
+});
+
+/**
+ * PATCH /api/cms/sections/:sectionId
+ * Granular update for a specific block's content (Layer 3).
+ * Since we use JSONB, we replace the whole content object for that language.
+ */
+router.patch("/sections/:sectionId", async (req, res) => {
+  const { sectionId } = req.params;
   const { contentEn, contentEl } = req.body;
 
   try {
-    await db.update(schema.contentBlocks)
+    const [updatedSection] = await db.update(schema.pageSections)
       .set({
         contentEn,
         contentEl,
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(schema.contentBlocks.pageId, pageId),
-          eq(schema.contentBlocks.sectionId, sectionId)
-        )
-      );
+      .where(eq(schema.pageSections.id, sectionId))
+      .returning();
 
-    await redis.del(`cms:${pageId}:en`);
-    await redis.del(`cms:${pageId}:el`);
+    // Invalidate caches
+    const [page] = await db.select()
+      .from(schema.marketingPages)
+      .where(eq(schema.marketingPages.id, updatedSection.pageId));
+    
+    if (page) {
+      await redis.del(`cms:layout:${page.slug}`);
+    }
 
     return res.json({ success: true });
   } catch (error) {
-    console.error("❌ [CMS-API] Update failed:", error);
-    return res.status(500).json({ error: "Failed to update content." });
+    console.error("❌ [CMS-API] Section update failed:", error);
+    return res.status(500).json({ error: "Failed to update section content." });
+  }
+});
+
+/**
+ * PATCH /api/cms/pages/:pageId/reorder
+ * Layer 2: Updates the orderIndex of multiple sections.
+ */
+router.patch("/pages/:pageId/reorder", async (req, res) => {
+  const { pageId } = req.params;
+  const { sectionOrders } = req.body; // Array of { id: string, orderIndex: number }
+
+  try {
+    await db.transaction(async (tx) => {
+      for (const item of sectionOrders) {
+        await tx.update(schema.pageSections)
+          .set({ orderIndex: item.orderIndex })
+          .where(and(
+            eq(schema.pageSections.id, item.id),
+            eq(schema.pageSections.pageId, pageId)
+          ));
+      }
+    });
+
+    return res.json({ success: true });
+  } catch (error) {
+    console.error("❌ [CMS-API] Reorder failed:", error);
+    return res.status(500).json({ error: "Failed to update layout order." });
   }
 });
 

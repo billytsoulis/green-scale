@@ -13,6 +13,8 @@
   --color-emerald-700: #047857;
   --color-emerald-800: #065f46;
   --color-emerald-900: #064e3b;
+
+  --color-red-destructive: #b91c1c;
   
   --font-sans: "Poppins", "Inter", ui-sans-serif, system-ui;
 }

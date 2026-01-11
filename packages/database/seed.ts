@@ -1,17 +1,15 @@
 import { db, schema, client } from './index';
-import { contentBlocks } from "./schema/cms";
-import { aboutBlocks } from "./cms/about-us.seed";
+import { eq, and } from "drizzle-orm";
 
 /**
  * GreenScale Master Seeder
  * Path: packages/database/seed.ts
- * Logic: 
- * 1. Synchronizes Auth (Users/Accounts)
- * 2. Synchronizes CMS Content (About Us, etc.) via Upsert
+ * * Updated: Refactored to support Modular CMS (GS-17).
+ * * Fix: Removed 'contentBlocks' and implemented Page -> Section relational seeding.
  */
 
 async function main() {
-  console.log('--- 🚀 Starting Master Seeder ---');
+  console.log('--- 🚀 Starting Master Seeder (Modular Version) ---');
 
   if (!process.env.BETTER_AUTH_SECRET) {
     console.error('❌ FATAL: BETTER_AUTH_SECRET is missing!');
@@ -21,7 +19,7 @@ async function main() {
   const now = new Date();
 
   try {
-    // --- 1. AUTH SEEDING ---
+    // --- 1. AUTH SEEDING (Staff Access) ---
     const managerId = "staff-alex-001";
     console.log(`[AUTH] Synchronizing Staff Profile: admin@greenscale.com...`);
     
@@ -56,24 +54,96 @@ async function main() {
       }
     });
 
-    // --- 2. CMS SEEDING ---
-    console.log("🌱 [CMS] Synchronizing dynamic content blocks...");
-    const allBlocks = [...aboutBlocks];
+    // --- 2. MODULAR CMS SEEDING ---
+    console.log("🌱 [CMS] Synchronizing Page Directory...");
 
-    for (const block of allBlocks) {
-      await db.insert(contentBlocks).values(block).onConflictDoUpdate({
-        target: [contentBlocks.pageId, contentBlocks.sectionId],
-        set: {
-          contentEn: block.contentEn,
-          contentEl: block.contentEl,
-          updatedAt: now
+    // Create or Update the "About Us" Page
+    const [aboutPage] = await db.insert(schema.marketingPages).values({
+      slug: "about-us",
+      title: "About GreenScale",
+      isNavItem: true,
+      seoMetadata: {
+        description: "Learn about GreenScale's mission to decarbonize capital markets.",
+        keywords: ["ESG", "Sustainability", "Data Integrity"]
+      }
+    }).onConflictDoUpdate({
+      target: schema.marketingPages.slug,
+      set: { title: "About GreenScale", updatedAt: now }
+    }).returning();
+
+    console.log(`✅ [CMS] Page Resolved: ${aboutPage.slug} (${aboutPage.id})`);
+
+    // Define the initial sections for the About Page
+    const initialSections = [
+      {
+        type: "HERO",
+        orderIndex: 1,
+        contentEn: {
+          badge: "A Legacy of Purpose",
+          title: "Guided by data that cannot be greenwashed.",
+          description: "GreenScale was founded on a single premise: Capital has the power to fix the world."
+        },
+        contentEl: {
+          badge: "Κληρονομιά με Σκοπό",
+          title: "Με οδηγό δεδομένα που δεν επιδέχονται greenwashing.",
+          description: "Η GreenScale ιδρύθηκε με μια απλή παραδοχή: Το κεφάλαιο έχει τη δύναμη να διορθώσει τον κόσμο."
         }
-      });
+      },
+      {
+        type: "TEAM_GRID",
+        orderIndex: 2,
+        contentEn: {
+          title: "The Specialists",
+          members: [
+            { id: "m1", name: "Eleni Kosta", role: "Chief Strategist", bio: "ESG alignment expert.", imageUrl: "" }
+          ]
+        },
+        contentEl: {
+          title: "Οι Ειδικοί Μας",
+          members: [
+            { id: "m1", name: "Ελένη Κώστα", role: "Επικεφαλής Στρατηγικής", bio: "Ειδική στην ευθυγράμμιση ESG.", imageUrl: "" }
+          ]
+        }
+      }
+    ];
+
+    console.log(`🌱 [CMS] Synchronizing ${initialSections.length} block sections...`);
+
+    for (const section of initialSections) {
+      // Find if section exists by Type and Order on this Page
+      const existing = await db.select().from(schema.pageSections).where(
+        and(
+          eq(schema.pageSections.pageId, aboutPage.id),
+          eq(schema.pageSections.type, section.type),
+          eq(schema.pageSections.orderIndex, section.orderIndex)
+        )
+      );
+
+      if (existing.length > 0) {
+        // Update
+        await db.update(schema.pageSections)
+          .set({
+            contentEn: section.contentEn,
+            contentEl: section.contentEl,
+            updatedAt: now
+          })
+          .where(eq(schema.pageSections.id, existing[0].id));
+      } else {
+        // Insert
+        await db.insert(schema.pageSections).values({
+          pageId: aboutPage.id,
+          type: section.type,
+          orderIndex: section.orderIndex,
+          contentEn: section.contentEn,
+          contentEl: section.contentEl,
+          updatedAt: now
+        });
+      }
     }
 
-    console.log(`✅ Success: Auth and ${allBlocks.length} CMS blocks synchronized.`);
+    console.log(`✅ Master Seed Complete.`);
   } catch (error) {
-    console.error('❌ Seed failed:', error);
+    console.error('❌ Master Seed failed:', error);
     process.exit(1);
   } finally {
     await client.end();
