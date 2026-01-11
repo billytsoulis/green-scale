@@ -6,8 +6,8 @@ import redis from "../lib/redis";
 /**
  * GreenScale CMS API Routes (Modular JSONB Architecture)
  * Path: apps/api-gateway/src/routes/cms.ts
- * * Updated: Refactored to handle marketingPages and pageSections with JSONB content.
- * * Logic: Efficient fetching of layouts and granular block updates.
+ * * Updated: Added POST /pages/:pageId/sections to resolve 404 on block creation.
+ * * Logic: Efficient fetching of layouts, granular block updates, and reordering.
  */
 
 const router: Router = Router();
@@ -70,6 +70,42 @@ router.get("/layout/:slug", async (req, res) => {
   } catch (error) {
     console.error(`❌ [CMS-API] Error fetching layout for ${slug}:`, error);
     return res.status(500).json({ error: "Failed to fetch page layout." });
+  }
+});
+
+/**
+ * POST /api/cms/pages/:pageId/sections
+ * Layer 2: Creates a new section instance for a specific page.
+ * Returns the newly created section with its generated UUID.
+ */
+router.post("/pages/:pageId/sections", async (req, res) => {
+  const { pageId } = req.params;
+  const { type, orderIndex } = req.body;
+
+  try {
+    const [newSection] = await db.insert(schema.pageSections).values({
+      pageId,
+      type,
+      orderIndex,
+      // Default empty JSONB structures for the new block
+      contentEn: {},
+      contentEl: {},
+      isActive: true,
+    }).returning();
+
+    // Invalidate the cache for this page so the portal sees the new block
+    const [page] = await db.select()
+      .from(schema.marketingPages)
+      .where(eq(schema.marketingPages.id, pageId));
+    
+    if (page) {
+      await redis.del(`cms:layout:${page.slug}`);
+    }
+
+    return res.status(201).json(newSection);
+  } catch (error) {
+    console.error("❌ [CMS-API] Block creation failed:", error);
+    return res.status(500).json({ error: "Failed to create block section." });
   }
 });
 
