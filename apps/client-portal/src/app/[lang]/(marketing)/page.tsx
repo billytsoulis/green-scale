@@ -3,10 +3,11 @@ import React from "react";
 /**
  * GreenScale Localized Home Page (Server Component)
  * Path: apps/client-portal/src/app/[lang]/(marketing)/page.tsx
- * * Refactored: Removed "use client" to support generateStaticParams.
- * * This is the Next.js best practice for SEO-optimized i18n.
+ * * Refactored: Next.js 15 async params compliance.
+ * * SEO: Pre-renders both language versions at build time.
  */
 
+// --- PREVIEW SAFETY IMPORTS ---
 // import { Header } from "../../../components/landing/Header";
 // import { Footer } from "../../../components/shared/Footer";
 import { Hero } from "../../../components/landing/Hero";
@@ -31,9 +32,13 @@ const el = {
   nav: { getStarted: "Ξεκινήστε Τώρα", methodology: "Δείτε τη Μεθοδολογία" }
 };
 
-export default function MarketingHomePage({ params }: { params: { lang: string } }) {
+export default async function MarketingHomePage({ params }: { params: Promise<{ lang: string }> }) {
+  // 1. Resolve parameters (Next.js 15 Requirement)
+  const { lang } = await params;
+  
   // Select dictionary based on the URL param directly (Server-side)
-  const t = params.lang === "el" ? el : en;
+  const t = lang === "el" ? el : en;
+  const isGreek = lang === "el";
 
   return (
     <div className="flex flex-col min-h-screen bg-white" data-component="MarketingHomePage">
@@ -55,24 +60,24 @@ export default function MarketingHomePage({ params }: { params: { lang: string }
           <div className="max-w-7xl mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             <div className="space-y-8">
               <h2 className="text-xs font-black text-brand-emerald-400 uppercase tracking-[0.4em]">
-                {params.lang === "el" ? "ΤΟ ΥΒΡΙΔΙΚΟ ΜΟΝΤΕΛΟ" : "The Hybrid Model"}
+                {isGreek ? "ΤΟ ΥΒΡΙΔΙΚΟ ΜΟΝΤΕΛΟ" : "The Hybrid Model"}
               </h2>
               <h3 className="text-5xl font-serif font-bold leading-tight">
-                {params.lang === "el" ? (
+                {isGreek ? (
                   <>AI Έλεγχος. <br/>Expert Στρατηγική.</>
                 ) : (
                   <>AI Audited. <br/>Expert Strategized.</>
                 )}
               </h3>
               <p className="text-slate-400 text-lg leading-relaxed max-w-lg">
-                {params.lang === "el" 
+                {isGreek 
                   ? "Ενώ οι αλγόριθμοί μας σαρώνουν εκατομμύρια σημεία δεδομένων για την επαλήθευση των ισχυρισμών ESG, οι εξειδικευμένοι διαχειριστές μας επιμελούνται τη στρατηγική που ταιριάζει στους μακροπρόθεσμους στόχους σας."
                   : "While our algorithms scan millions of data points to verify ESG claims, our human wealth managers curate the strategy to match your family's long-term legacy goals."
                 }
               </p>
               <div className="pt-4">
                 <button className="px-8 py-4 bg-brand-emerald-600 text-white rounded-2xl font-bold hover:bg-brand-emerald-500 transition-all shadow-lg shadow-emerald-900/20">
-                  {params.lang === "el" ? "Γνωρίστε την Ομάδα" : "Meet the Strategy Team"}
+                  {isGreek ? "Γνωρίστε την Ομάδα" : "Meet the Strategy Team"}
                 </button>
               </div>
             </div>
@@ -83,7 +88,7 @@ export default function MarketingHomePage({ params }: { params: { lang: string }
                       <div className="w-8 h-8 border-2 border-brand-emerald-400 rounded-lg animate-pulse" />
                    </div>
                    <p className="text-xs font-black uppercase tracking-widest text-brand-emerald-400">
-                     {params.lang === "el" ? "Διεπαφή Analytics" : "Staff Analytics Interface"}
+                     {isGreek ? "Διεπαφή Analytics" : "Staff Analytics Interface"}
                    </p>
                 </div>
               </div>
@@ -104,13 +109,13 @@ export default function MarketingHomePage({ params }: { params: { lang: string }
 
           <div className="max-w-4xl mx-auto px-8 text-center space-y-10 relative z-10">
             <h2 className="text-6xl md:text-7xl font-serif font-black text-slate-900 tracking-tight leading-[1.1]">
-              {params.lang === "el" 
+              {isGreek 
                 ? <>Είστε έτοιμοι να Ευθυγραμμίσετε τον <br/>Πλούτο με τις Αξίες σας;</>
                 : <>Ready to Align Your <br/>Wealth with Your Values?</>
               }
             </h2>
             <p className="text-xl text-slate-500 font-medium max-w-2xl mx-auto">
-              {params.lang === "el"
+              {isGreek
                 ? "Γίνετε μέλος μιας επιλεγμένης ομάδας Ευρωπαίων επενδυτών που μετασχηματίζουν το παγκόσμιο κεφάλαιο προς ένα βιώσιμο και κερδοφόρο μέλλον."
                 : "Join a select group of European investors transitioning the world's capital toward a sustainable and profitable future."
               }

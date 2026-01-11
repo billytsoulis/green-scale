@@ -5,25 +5,25 @@ import { aboutBlocks } from "./cms/about-us.seed";
 /**
  * GreenScale CMS Seeding Logic
  * Path: packages/database/seed-cms.ts
- * * Updated: Modularized to import page-specific content blocks.
+ * * Updated: Aggregates all marketing blocks and implements 'upsert' logic.
+ * * Strategy: Targeted updates on [pageId, sectionId] conflicts to avoid data loss.
  */
 
 async function seed() {
-  console.log("🌱 [CMS-SEED] Initializing Tier B content blocks...");
+  console.log("🌱 [CMS-SEED] Synchronizing dynamic content blocks...");
 
-  // Aggregate all modular seeds here as we build them
   const allBlocks = [
     ...aboutBlocks,
-    // ...homeBlocks,
-    // ...pricingBlocks,
+    // Add future page blocks here (e.g., ...homeBlocks)
   ];
 
   try {
     for (const block of allBlocks) {
       /**
-       * Upsert Logic:
-       * Ensures that re-running the seed script updates existing values
-       * instead of throwing unique constraint errors.
+       * UPSERT Logic:
+       * Uses 'onConflictDoUpdate' targeting the unique index [pageId, sectionId].
+       * This allows you to run the seed script repeatedly to reset text values
+       * without creating duplicate records.
        */
       await db.insert(contentBlocks).values(block).onConflictDoUpdate({
         target: [contentBlocks.pageId, contentBlocks.sectionId],
@@ -34,9 +34,11 @@ async function seed() {
         }
       });
     }
-    console.log(`✅ [CMS-SEED] Synchronized ${allBlocks.length} content blocks.`);
+    
+    console.log(`✅ [CMS-SEED] Success: ${allBlocks.length} blocks synchronized.`);
   } catch (error) {
-    console.error("❌ [CMS-SEED] Synchronization failed:", error);
+    console.error("❌ [CMS-SEED] Critical failure during synchronization:");
+    console.error(error);
     process.exit(1);
   } finally {
     process.exit(0);

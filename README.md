@@ -80,7 +80,7 @@ check the standalone checkbox
 - cd packages/database
 - pnpm db:generate
 - pnpm db:push
-- pnpm db:seed
+- pnpm db:seed || pnpm --filter @greenscale/database db:seed
 
 ## Test the data
 - npx tsx test-read.ts

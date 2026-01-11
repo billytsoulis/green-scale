@@ -6,40 +6,58 @@ import redis from "../lib/redis";
 /**
  * GreenScale CMS API Routes
  * Path: apps/api-gateway/src/routes/cms.ts
- * * Implements Tier B translation with Redis caching.
+ * * Updated: Added 'nocache' support for development and fixed the cache-first logic.
  */
 
 const router: Router = Router();
 
 /**
  * GET /api/cms/:pageId
- * Fetches all content blocks for a page, with a Redis cache-aside layer.
+ * Public endpoint: Returns a localized key-value map for the Client Portal.
  */
 router.get("/:pageId", async (req, res) => {
   const { pageId } = req.params;
   const lang = (req.query.lang as string) || "en";
+  
+  // Logic: 'admin' returns raw blocks, 'nocache' skips Redis
+  const isAdmin = req.query.admin === "true";
+  const noCache = req.query.nocache === "true"; 
   const redisKey = `cms:${pageId}:${lang}`;
 
   try {
-    // 1. Check Redis Cache
-    const cachedData = await redis.get(redisKey);
-    if (cachedData) {
-      return res.json(JSON.parse(cachedData));
+    // 1. Check Redis Cache (Skip if isAdmin or noCache is requested)
+    if (!isAdmin && !noCache) {
+      const cachedData = await redis.get(redisKey);
+      if (cachedData) {
+        const parsed = JSON.parse(cachedData);
+        // Debug log to terminal
+        console.log(`[CMS-API] Serving ${pageId}:${lang} from Redis (${Object.keys(parsed).length} keys)`);
+        return res.json(parsed);
+      }
     }
 
-    // 2. Cache Miss: Fetch from PostgreSQL using Drizzle Relational API
+    // 2. Fetch from PostgreSQL
+    console.log(`[CMS-API] Cache miss or bypass. Fetching ${pageId} from PostgreSQL...`);
     const blocks = await db.query.contentBlocks.findMany({
       where: (contentBlocks: any, { eq }: any) => eq(contentBlocks.pageId, pageId),
     });
 
-    // 3. Map language-specific content
+    // 3. Admin Response: Return the full block objects
+    if (isAdmin) {
+      return res.json(blocks);
+    }
+
+    // 4. Public Response: Map language-specific content
     const contentMap = blocks.reduce((acc: any, block: any) => {
       acc[block.sectionId] = lang === "el" ? block.contentEl : block.contentEn;
       return acc;
     }, {} as Record<string, string>);
 
-    // 4. Hydrate Cache (TTL: 24 hours)
-    await redis.set(redisKey, JSON.stringify(contentMap), "EX", 86400);
+    // 5. Hydrate Cache (TTL: 24 hours)
+    if (blocks.length > 0) {
+      await redis.set(redisKey, JSON.stringify(contentMap), "EX", 86400);
+      console.log(`[CMS-API] Cache hydrated for ${pageId}:${lang} with ${blocks.length} blocks.`);
+    }
 
     return res.json(contentMap);
   } catch (error) {
@@ -50,14 +68,12 @@ router.get("/:pageId", async (req, res) => {
 
 /**
  * PATCH /api/cms/:pageId/:sectionId
- * Updates a specific block and invalidates the Redis cache for that page.
  */
 router.patch("/:pageId/:sectionId", async (req, res) => {
   const { pageId, sectionId } = req.params;
   const { contentEn, contentEl } = req.body;
 
   try {
-    // 1. Update Database
     await db.update(schema.contentBlocks)
       .set({
         contentEn,
@@ -71,11 +87,10 @@ router.patch("/:pageId/:sectionId", async (req, res) => {
         )
       );
 
-    // 2. Invalidate Cache for both languages to ensure consistency
     await redis.del(`cms:${pageId}:en`);
     await redis.del(`cms:${pageId}:el`);
 
-    return res.json({ success: true, message: `Block ${sectionId} updated and cache cleared.` });
+    return res.json({ success: true });
   } catch (error) {
     console.error("❌ [CMS-API] Update failed:", error);
     return res.status(500).json({ error: "Failed to update content." });
