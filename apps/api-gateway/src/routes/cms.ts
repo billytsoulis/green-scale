@@ -6,15 +6,14 @@ import redis from "../lib/redis";
 /**
  * GreenScale CMS API Routes (Modular JSONB Architecture)
  * Path: apps/api-gateway/src/routes/cms.ts
- * * Updated: Added POST /pages/:pageId/sections to resolve 404 on block creation.
- * * Logic: Efficient fetching of layouts, granular block updates, and reordering.
+ * * Updated: Added GET /sections/:sectionId to support Layer 3 editors.
  */
 
 const router: Router = Router();
 
 /**
  * GET /api/cms/pages
- * Returns the list of all marketing pages for Layer 1 directory.
+ * Returns the list of all marketing pages.
  */
 router.get("/pages", async (req, res) => {
   try {
@@ -27,9 +26,27 @@ router.get("/pages", async (req, res) => {
 });
 
 /**
+ * GET /api/cms/sections/:sectionId
+ * Layer 3: Fetches the specific content for a block editor.
+ */
+router.get("/sections/:sectionId", async (req, res) => {
+  const { sectionId } = req.params;
+  try {
+    const [section] = await db.select()
+      .from(schema.pageSections)
+      .where(eq(schema.pageSections.id, sectionId));
+
+    if (!section) return res.status(404).json({ error: "Section not found" });
+    return res.json(section);
+  } catch (error) {
+    console.error("❌ [CMS-API] Failed to fetch section:", error);
+    return res.status(500).json({ error: "Database error." });
+  }
+});
+
+/**
  * GET /api/cms/layout/:slug
- * Returns the full layout for a page including all ordered sections and content.
- * Used by both LayoutCanvas (Layer 2) and Client Portal.
+ * Returns the full layout for a page.
  */
 router.get("/layout/:slug", async (req, res) => {
   const { slug } = req.params;
@@ -37,46 +54,38 @@ router.get("/layout/:slug", async (req, res) => {
   const redisKey = `cms:layout:${slug}`;
 
   try {
-    // 1. Check Redis for public-facing requests
     if (!noCache) {
       const cached = await redis.get(redisKey);
       if (cached) return res.json(JSON.parse(cached));
     }
 
-    // 2. Resolve Page
     const [page] = await db.select()
       .from(schema.marketingPages)
       .where(eq(schema.marketingPages.slug, slug));
 
     if (!page) return res.status(404).json({ error: "Page not found" });
 
-    // 3. Fetch Ordered Sections
     const sections = await db.select()
       .from(schema.pageSections)
       .where(eq(schema.pageSections.pageId, page.id))
       .orderBy(asc(schema.pageSections.orderIndex));
 
-    const response = {
-      page,
-      sections
-    };
+    const response = { page, sections };
 
-    // 4. Cache the result for 1 hour if not bypass
     if (!noCache) {
       await redis.set(redisKey, JSON.stringify(response), "EX", 3600);
     }
 
     return res.json(response);
   } catch (error) {
-    console.error(`❌ [CMS-API] Error fetching layout for ${slug}:`, error);
+    console.error(`❌ [CMS-API] Error fetching layout:`, error);
     return res.status(500).json({ error: "Failed to fetch page layout." });
   }
 });
 
 /**
  * POST /api/cms/pages/:pageId/sections
- * Layer 2: Creates a new section instance for a specific page.
- * Returns the newly created section with its generated UUID.
+ * Layer 2: Creates a new section instance.
  */
 router.post("/pages/:pageId/sections", async (req, res) => {
   const { pageId } = req.params;
@@ -87,32 +96,20 @@ router.post("/pages/:pageId/sections", async (req, res) => {
       pageId,
       type,
       orderIndex,
-      // Default empty JSONB structures for the new block
       contentEn: {},
       contentEl: {},
       isActive: true,
     }).returning();
 
-    // Invalidate the cache for this page so the portal sees the new block
-    const [page] = await db.select()
-      .from(schema.marketingPages)
-      .where(eq(schema.marketingPages.id, pageId));
-    
-    if (page) {
-      await redis.del(`cms:layout:${page.slug}`);
-    }
-
     return res.status(201).json(newSection);
   } catch (error) {
-    console.error("❌ [CMS-API] Block creation failed:", error);
     return res.status(500).json({ error: "Failed to create block section." });
   }
 });
 
 /**
  * PATCH /api/cms/sections/:sectionId
- * Granular update for a specific block's content (Layer 3).
- * Since we use JSONB, we replace the whole content object for that language.
+ * Layer 3: Granular update for a specific block's content.
  */
 router.patch("/sections/:sectionId", async (req, res) => {
   const { sectionId } = req.params;
@@ -120,54 +117,41 @@ router.patch("/sections/:sectionId", async (req, res) => {
 
   try {
     const [updatedSection] = await db.update(schema.pageSections)
-      .set({
-        contentEn,
-        contentEl,
-        updatedAt: new Date(),
-      })
+      .set({ contentEn, contentEl, updatedAt: new Date() })
       .where(eq(schema.pageSections.id, sectionId))
       .returning();
 
-    // Invalidate caches
     const [page] = await db.select()
       .from(schema.marketingPages)
       .where(eq(schema.marketingPages.id, updatedSection.pageId));
     
-    if (page) {
-      await redis.del(`cms:layout:${page.slug}`);
-    }
+    if (page) await redis.del(`cms:layout:${page.slug}`);
 
     return res.json({ success: true });
   } catch (error) {
-    console.error("❌ [CMS-API] Section update failed:", error);
-    return res.status(500).json({ error: "Failed to update section content." });
+    return res.status(500).json({ error: "Failed to update content." });
   }
 });
 
 /**
  * PATCH /api/cms/pages/:pageId/reorder
- * Layer 2: Updates the orderIndex of multiple sections.
+ * Layer 2: Reorders sections.
  */
 router.patch("/pages/:pageId/reorder", async (req, res) => {
   const { pageId } = req.params;
-  const { sectionOrders } = req.body; // Array of { id: string, orderIndex: number }
+  const { sectionOrders } = req.body;
 
   try {
     await db.transaction(async (tx) => {
       for (const item of sectionOrders) {
         await tx.update(schema.pageSections)
           .set({ orderIndex: item.orderIndex })
-          .where(and(
-            eq(schema.pageSections.id, item.id),
-            eq(schema.pageSections.pageId, pageId)
-          ));
+          .where(and(eq(schema.pageSections.id, item.id), eq(schema.pageSections.pageId, pageId)));
       }
     });
-
     return res.json({ success: true });
   } catch (error) {
-    console.error("❌ [CMS-API] Reorder failed:", error);
-    return res.status(500).json({ error: "Failed to update layout order." });
+    return res.status(500).json({ error: "Failed to reorder layout." });
   }
 });
 
