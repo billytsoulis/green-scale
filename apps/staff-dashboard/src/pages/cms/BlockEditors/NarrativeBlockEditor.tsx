@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
-import { ChevronLeft, Save, Eye, FileText } from "lucide-react";
-import { Button, Card, Badge } from "@repo/ui";
-import RichTextEditor from "./Shared/RichTextEditor";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ChevronLeft, Save, Eye, ExternalLink } from "lucide-react";
+import { Button, Card } from "@repo/ui";
+import RichTextEditor, { cleanRichText } from "./Shared/RichTextEditor";
 
 /**
  * Narrative Block Editor (Layer 3)
@@ -17,100 +17,190 @@ interface NarrativeContent {
 }
 
 export default function NarrativeBlockEditor() {
+  const navigate = useNavigate();
+  const { sectionId } = useParams();
+  
   const [contentEn, setContentEn] = useState<NarrativeContent>({ title: "", paragraph1: "", paragraph2: "" });
   const [contentEl, setContentEl] = useState<NarrativeContent>({ title: "", paragraph1: "", paragraph2: "" });
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [activeLang, setActiveLang] = useState<"en" | "el">("en");
-  const [showPreview, setShowPreview] = useState(false);
+  
+  const [previewId] = useState(() => crypto.randomUUID());
+  const hasFetched = useRef(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const gatewayUrl = "http://localhost:3005";
+  const portalUrl = "http://localhost:3000";
+
+  /**
+   * 1. Hydrate Data from Database (PostgreSQL)
+   */
+  useEffect(() => {
+    if (!sectionId || hasFetched.current) return;
+    hasFetched.current = true;
+
+    const fetchSectionData = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${gatewayUrl}/api/cms/sections/${sectionId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.contentEn) setContentEn(data.contentEn);
+          if (data.contentEl) setContentEl(data.contentEl);
+        }
+      } catch (err) { 
+        console.error("Fetch error:", err); 
+        hasFetched.current = false;
+      } finally { 
+        setLoading(false); 
+      }
+    };
+    fetchSectionData();
+  }, [sectionId, gatewayUrl]);
+
+  /**
+   * 2. Phase 4: Transient Sync Logic (Redis + Sockets)
+   */
+  const syncPreview = useCallback(async (en: NarrativeContent, el: NarrativeContent) => {
+    try {
+      await fetch(`${gatewayUrl}/api/cms/preview/${previewId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          contentEn: { ...en, paragraph1: cleanRichText(en.paragraph1), paragraph2: cleanRichText(en.paragraph2) }, 
+          contentEl: { ...el, paragraph1: cleanRichText(el.paragraph1), paragraph2: cleanRichText(el.paragraph2) }, 
+          type: "NARRATIVE" 
+        })
+      });
+    } catch (err) { console.warn("Sync error"); }
+  }, [previewId, gatewayUrl]);
 
   useEffect(() => {
-    // Mock data for Narrative seed
-    setContentEn({
-      title: "Our Heritage",
-      paragraph1: "GreenScale was founded to bring clarity to the ESG landscape.",
-      paragraph2: "We believe that data integrity is the only way to drive real change."
-    });
-    setContentEl({
-      title: "Η Κληρονομιά Μας",
-      paragraph1: "Η GreenScale ιδρύθηκε για να φέρει σαφήνεια στο τοπίο του ESG.",
-      paragraph2: "Πιστεύουμε ότι η ακεραιότητα των δεδομένων είναι ο μόνος τρόπος για την πραγματική αλλαγή."
-    });
-  }, []);
+    if (loading) return;
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => syncPreview(contentEn, contentEl), 300);
+    return () => { if (debounceTimer.current) clearTimeout(debounceTimer.current); };
+  }, [contentEn, contentEl, syncPreview, loading]);
+
+  /**
+   * 3. Persistence (PostgreSQL)
+   */
+  const handleSave = async () => {
+    setIsSaving(true);
+
+    const payload = {
+      contentEn: { ...contentEn, paragraph1: cleanRichText(contentEn.paragraph1), paragraph2: cleanRichText(contentEn.paragraph2) },
+      contentEl: { ...contentEl, paragraph1: cleanRichText(contentEl.paragraph1), paragraph2: cleanRichText(contentEl.paragraph2) }
+    };
+    try {
+      await fetch(`${gatewayUrl}/api/cms/sections/${sectionId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      setTimeout(() => setIsSaving(false), 500);
+    } catch (err) { setIsSaving(false); }
+  };
 
   const currentContent = activeLang === "en" ? contentEn : contentEl;
-  const setContent = activeLang === "en" ? setContentEn : setContentEl;
+
+  const setContent = (newData: NarrativeContent) => {
+    const prevData = activeLang === "en" ? contentEn : contentEl;
+    
+    if (
+      newData.title === prevData.title && 
+      newData.paragraph1 === prevData.paragraph1 && 
+      newData.paragraph2 === prevData.paragraph2
+    ) {
+      return;
+    }
+
+    if (activeLang === "en") setContentEn(newData);
+    else setContentEl(newData);
+  };
+
+  const handleOpenPreview = () => {
+    window.open(`${portalUrl}/${activeLang}/preview/block?type=NARRATIVE&id=${previewId}`, "_blank");
+  };
+
+  if (loading) return (
+    <div className="h-96 flex flex-col items-center justify-center gap-4 text-slate-400">
+       <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+       <p className="font-bold tracking-widest uppercase text-[10px]">Establishing Mirror Session...</p>
+    </div>
+  );
 
   return (
-    <div className="space-y-8 pb-32">
-      <header className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm sticky top-0 z-20">
+    <div className="space-y-8 pb-20" data-component="NarrativeBlockEditor">
+      <header className="flex justify-between items-center bg-white p-6 rounded-4xl border border-slate-100 shadow-sm sticky top-0 z-20 backdrop-blur-md">
         <div className="flex items-center gap-4">
-          {/* @ts-ignore */}
-          <Button variant="ghost" size="sm" className="!rounded-xl text-slate-400">
-            {/* @ts-ignore */}
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="rounded-xl!">
             <ChevronLeft size={20} />
           </Button>
           <div>
             <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">Edit Narrative</h2>
             <div className="flex gap-4 mt-1">
-              <button onClick={() => setActiveLang("en")} className={`text-[10px] font-black uppercase tracking-widest ${activeLang === 'en' ? 'text-brand-emerald-600' : 'text-slate-300'}`}>English</button>
-              <button onClick={() => setActiveLang("el")} className={`text-[10px] font-black uppercase tracking-widest ${activeLang === 'el' ? 'text-brand-emerald-600' : 'text-slate-300'}`}>Greek</button>
+              <button onClick={() => setActiveLang("en")} className={`text-[10px] font-black uppercase tracking-widest transition-colors ${activeLang === 'en' ? 'text-emerald-600 underline underline-offset-4' : 'text-slate-300'}`}>English</button>
+              <button onClick={() => setActiveLang("el")} className={`text-[10px] font-black uppercase tracking-widest transition-colors ${activeLang === 'el' ? 'text-emerald-600 underline underline-offset-4' : 'text-slate-300'}`}>Greek</button>
             </div>
           </div>
         </div>
 
         <div className="flex gap-3">
-          {/* @ts-ignore */}
-          <Button variant="outline" onClick={() => setShowPreview(!showPreview)} className="!rounded-xl flex items-center gap-2 text-xs">
-            {/* @ts-ignore */}
-            <Eye size={14} /> Preview
+          <Button variant="outline" onClick={handleOpenPreview} className="rounded-xl! px-6! flex items-center gap-2 text-xs hover:border-emerald-500 group">
+            <Eye size={14} className="group-hover:text-emerald-600" /> Live Preview 
+            <ExternalLink size={12} />
           </Button>
-          {/* @ts-ignore */}
-          <Button className="!rounded-xl !bg-brand-emerald-800 shadow-lg text-xs">Update Section</Button>
+          <Button onClick={handleSave} disabled={isSaving} className="rounded-xl! px-6! bg-emerald-900! text-white shadow-lg shadow-emerald-900/20 text-xs flex items-center gap-2 active:scale-95 transition-all">
+            {isSaving ? "Syncing..." : <><Save size={14} /> Update Section</>}
+          </Button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        <div className="space-y-6">
-          {/* @ts-ignore */}
-          <Card className="p-10 space-y-8 border-slate-100 bg-white">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Section Heading</label>
-              <input 
-                type="text" 
-                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-brand-emerald-500 transition-all"
-                value={currentContent.title}
-                onChange={(e) => setContent({...currentContent, title: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Primary Paragraph</label>
-              {/* @ts-ignore */}
-              <RichTextEditor 
-                value={currentContent.paragraph1}
-                onChange={(val) => setContent({...currentContent, paragraph1: val})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Secondary Paragraph</label>
-              {/* @ts-ignore */}
-              <RichTextEditor 
-                value={currentContent.paragraph2}
-                onChange={(val) => setContent({...currentContent, paragraph2: val})}
-              />
-            </div>
-          </Card>
-        </div>
-
-        <div className="relative">
-          <div className={`sticky top-32 transition-all duration-500 ${showPreview ? 'opacity-100 translate-y-0' : 'opacity-40 grayscale translate-y-4 pointer-events-none'}`}>
-             <div className="bg-white rounded-[3rem] border border-slate-100 shadow-2xl p-12 overflow-hidden min-h-[500px] space-y-6">
-                <h2 className="text-3xl font-bold text-slate-900">{currentContent.title}</h2>
-                <div className="text-lg text-slate-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentContent.paragraph1 }} />
-                <div className="text-lg text-slate-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: currentContent.paragraph2 }} />
-             </div>
+      <div className="max-w-4xl mx-auto space-y-6">
+        <Card className="p-10 space-y-8 border-slate-100 bg-white shadow-xl shadow-slate-200/50">
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Narrative Heading</label>
+            <input 
+              type="text" 
+              className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-emerald-500 transition-all" 
+              value={currentContent.title} 
+              onChange={(e) => setContent({...currentContent, title: e.target.value})} 
+            />
           </div>
-        </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Primary Paragraph</label>
+            <RichTextEditor 
+              key={`p1-${activeLang}`}
+              value={currentContent.paragraph1} 
+              onChange={(val: string) => {
+                if (val !== currentContent.paragraph1) {
+                  setContent({...currentContent, paragraph1: val});
+                }
+              }} 
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Secondary Paragraph</label>
+            <RichTextEditor 
+              key={`p2-${activeLang}`}
+              value={currentContent.paragraph2} 
+              onChange={(val: string) => {
+                if (val !== currentContent.paragraph2) {
+                  setContent({...currentContent, paragraph2: val});
+                }
+              }} 
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 bg-white/80 backdrop-blur-md rounded-full border border-slate-100 shadow-xl flex items-center gap-4">
+        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Mirror Session ID: {previewId.slice(0, 8)}</span>
       </div>
     </div>
   );

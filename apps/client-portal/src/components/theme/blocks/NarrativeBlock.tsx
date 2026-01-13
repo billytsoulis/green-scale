@@ -50,7 +50,7 @@ export const NarrativeBlock = ({ data }: NarrativeBlockProps) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-12">
         {/* The Audit Card (Brand Emerald) */}
-        <div className="p-10 bg-[#064e3b] rounded-[2.5rem] text-white space-y-4 shadow-xl shadow-emerald-900/10">
+        <div className="p-10 bg-brand-emerald-900 rounded-[2.5rem] text-white space-y-4 shadow-xl shadow-emerald-900/10">
           <h3 className="text-2xl font-bold">{auditTitle}</h3>
           <p 
             className="text-emerald-100/70 text-sm leading-relaxed"
