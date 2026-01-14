@@ -1,6 +1,6 @@
 import { db, schema, client } from './index';
 import { eq, and } from "drizzle-orm";
-
+import { projectsData } from "./cms/projects.seed";
 /**
  * GreenScale Master Seeder
  * Path: packages/database/seed.ts
@@ -139,6 +139,35 @@ async function main() {
           updatedAt: now
         });
       }
+    }
+
+    for (const project of projectsData) {
+      // Create a clean insert object to avoid type mismatches with the spread operator
+      const projectInsert = {
+        slug: project.slug,
+        category: project.category,
+        // Explicitly cast status to any or the specific enum type to fix the "string is not assignable" error
+        status: project.status as any,
+        targetIrr: project.targetIrr,
+        minInvestment: project.minInvestment,
+        esgScore: project.esgScore,
+        location: project.location,
+        contentEn: project.contentEn,
+        contentEl: project.contentEl,
+        fundingStatus: project.fundingStatus,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      await db.insert(schema.projects).values(projectInsert).onConflictDoUpdate({
+        target: schema.projects.slug,
+        set: { 
+          status: project.status as any,
+          esgScore: project.esgScore,
+          fundingStatus: project.fundingStatus,
+          updatedAt: now 
+        }
+      });
     }
 
     console.log(`✅ Master Seed Complete.`);
