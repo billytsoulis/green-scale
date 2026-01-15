@@ -142,7 +142,7 @@ export default function ProjectEditor() {
         </div>
         <div className="flex gap-4">
            <Button variant="outline" className="text-xs" onClick={() => navigate("/projects")}>Discard Changes</Button>
-           <Button className="text-xs" onClick={handleSave} disabled={isSaving}>
+           <Button onClick={handleSave} disabled={isSaving} className="!rounded-xl !px-6 !bg-[#064e3b] text-white shadow-lg shadow-emerald-900/20 text-xs flex items-center gap-2 active:scale-95 transition-all">
              {isSaving ? (
                <><Loader2 size={14} /> Syncing Database...</>
              ) : (

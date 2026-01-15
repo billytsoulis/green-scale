@@ -16,6 +16,7 @@ const router: Router = Router();
 
 /**
  * GET /api/cms/pages
+ * Returns the list of all marketing pages for the dashboard directory.
  */
 router.get("/", async (req, res) => {
   try {
@@ -28,7 +29,43 @@ router.get("/", async (req, res) => {
 });
 
 /**
+ * POST /api/cms/pages
+ * Logic: Creates a new marketing page shell.
+ * This resolves the backend limitation for creating new pages from the dashboard.
+ */
+router.post("/", async (req, res) => {
+  const { title, slug, isNavItem } = req.body;
+
+  // 1. Validation: Ensure required fields are present
+  if (!title || !slug) {
+    return res.status(400).json({ error: "Title and slug are required for new pages." });
+  }
+
+  try {
+    // 2. Slug Normalization (e.g., "Our Services" -> "our-services")
+    const cleanSlug = slug.toLowerCase().trim().replace(/\s+/g, '-');
+
+    // 3. Database Insertion: Insert the new page record
+    // @ts-ignore
+    const [newPage] = await db.insert(schema.marketingPages).values({
+      title,
+      slug: cleanSlug,
+      isNavItem: !!isNavItem,
+    }).returning();
+
+    return res.status(201).json(newPage);
+  } catch (error: any) {
+    // 4. Handle Postgres Unique Constraint (error code 23505 for unique violation)
+    if (error.code === '23505') {
+      return res.status(409).json({ error: "A page with this slug already exists." });
+    }
+    return res.status(500).json({ error: "Database failure during page creation." });
+  }
+});
+
+/**
  * GET /api/cms/layout/:slug
+ * Fetches the page metadata and all ordered sections for a specific slug.
  */
 router.get("/layout/:slug", async (req, res) => {
   const { slug } = req.params;
@@ -36,16 +73,19 @@ router.get("/layout/:slug", async (req, res) => {
   const redisKey = `cms:layout:${slug}`;
 
   try {
+    // Check Redis cache first unless noCache is specified
     // @ts-ignore
     if (!noCache) {
       const cached = await redis.get(redisKey);
       if (cached) return res.json(JSON.parse(cached));
     }
 
+    // Fetch page metadata from database
     // @ts-ignore
     const [page] = await db.select().from(schema.marketingPages).where(eq(schema.marketingPages.slug, slug));
     if (!page) return res.status(404).json({ error: "Page not found" });
 
+    // Fetch associated sections in order
     // @ts-ignore
     const sections = await db.select()
       .from(schema.pageSections)
@@ -54,6 +94,7 @@ router.get("/layout/:slug", async (req, res) => {
 
     const response = { page, sections };
 
+    // Update cache if applicable
     // @ts-ignore
     if (!noCache) await redis.set(redisKey, JSON.stringify(response), "EX", 3600);
 

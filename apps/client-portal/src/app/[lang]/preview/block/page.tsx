@@ -6,6 +6,8 @@ import { io } from "socket.io-client";
 import { HeroBlock } from "@/components/theme/blocks/HeroBlock";
 import { NarrativeBlock } from "@/components/theme/blocks/NarrativeBlock";
 import { TeamGridBlock } from "@/components/theme/blocks/TeamGridBlock";
+import { ProjectHeroBlock } from "@/components/theme/blocks/ProjectHeroBlock";
+import { ProjectDirectoryBlock } from "@/components/theme/blocks/ProjectDirectoryBlock";
 
 /**
  * GreenScale Isolated Block Preview
@@ -15,7 +17,12 @@ import { TeamGridBlock } from "@/components/theme/blocks/TeamGridBlock";
  */
 
 export default function BlockPreviewPage() {
-  const { lang } = useParams();
+  // @ts-ignore
+  const params = useParams();
+  // Fixed: Cast lang to string to resolve 'ParamValue' type mismatch
+  const lang = (params?.lang as string) || "en";
+
+  // @ts-ignore
   const searchParams = useSearchParams();
   
   const previewId = searchParams.get("id");
@@ -35,7 +42,7 @@ export default function BlockPreviewPage() {
 
     /**
      * 1. Initial Handshake
-     * Fetch the transient data from Redis to ensure the page isn't empty on load.
+     * Fetch the transient data from Redis.
      */
     const fetchInitialState = async () => {
       try {
@@ -56,22 +63,23 @@ export default function BlockPreviewPage() {
 
     /**
      * 2. Socket.io Live Sync
-     * Connect to the gateway and join the specific preview room.
      */
     const socket = io(gatewayUrl);
     socketRef.current = socket;
 
+    // @ts-ignore
     socket.on("connect", () => {
-      console.log("🟢 [PREVIEW] Connected to Sync Engine");
+      // @ts-ignore
       socket.emit("portal:join-preview", previewId);
     });
 
+    // @ts-ignore
     socket.on("portal:preview-sync", (data: any) => {
-      console.log("⚡ [PREVIEW] Real-time update received");
       setPreviewData(data);
     });
 
     return () => {
+      // @ts-ignore
       socket.disconnect();
     };
   }, [previewId, gatewayUrl]);
@@ -80,9 +88,9 @@ export default function BlockPreviewPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
         <div className="text-center space-y-4">
-          <div className="text-4xl">⚠️</div>
+          <div className="text-4xl text-slate-300">⚠️</div>
           <h1 className="text-xl font-bold text-slate-900">Preview Session Expired</h1>
-          <p className="text-slate-400 max-w-xs mx-auto text-sm">Please close this tab and click the preview icon in the dashboard again.</p>
+          <p className="text-slate-400 max-w-xs mx-auto text-sm font-medium italic">Please close this tab and click the preview icon in the dashboard again.</p>
         </div>
       </div>
     );
@@ -92,8 +100,8 @@ export default function BlockPreviewPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
         <div className="text-center space-y-4">
-          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Syncing with Dashboard...</p>
+          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto shadow-[0_0_15px_rgba(16,185,129,0.2)]" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Syncing with Dashboard...</p>
         </div>
       </div>
     );
@@ -103,14 +111,14 @@ export default function BlockPreviewPage() {
   const currentContent = lang === "el" ? previewData.contentEl : previewData.contentEn;
 
   /**
-   * 3. Component Rendering
-   * We render the specific block requested by the 'type' parameter.
+   * 3. Component Rendering Switch
+   * We add support for the new PROJECT blocks here.
    */
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" data-component="BlockPreviewPage">
       {/* Sync Status Indicator (Staff Only) */}
-      <div className="fixed bottom-6 right-6 z-50 px-4 py-2 bg-slate-900/90 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-3 shadow-2xl">
-        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+      <div className="fixed bottom-6 right-6 z-50 px-5 py-2 bg-slate-900/90 backdrop-blur-md rounded-full border border-white/10 flex items-center gap-3 shadow-2xl">
+        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
         <span className="text-[10px] font-black text-white uppercase tracking-widest">Live Mirror Active</span>
       </div>
 
@@ -119,9 +127,13 @@ export default function BlockPreviewPage() {
         {type === "NARRATIVE" && <NarrativeBlock data={currentContent} />}
         {type === "TEAM_GRID" && <TeamGridBlock data={currentContent} />}
         
-        {!["HERO", "NARRATIVE", "TEAM_GRID"].includes(type || "") && (
-          <div className="p-20 text-center italic text-slate-300">
-            Unknown block type: {type}
+        {/* GS-25 Support: Project Blocks */}
+        {type === "PROJECT_HERO" && <ProjectHeroBlock data={currentContent} />}
+        {type === "PROJECT_DIRECTORY" && <ProjectDirectoryBlock data={currentContent} lang={lang} />}
+        
+        {!["HERO", "NARRATIVE", "TEAM_GRID", "PROJECT_HERO", "PROJECT_DIRECTORY"].includes(type || "") && (
+          <div className="p-40 text-center italic text-slate-300 font-medium">
+            Unknown block type: <span className="text-emerald-600 font-bold font-mono">{type}</span>
           </div>
         )}
       </main>
