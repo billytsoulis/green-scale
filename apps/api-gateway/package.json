@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@greenscale/database": "workspace:*",
-    "better-auth": "latest",
+    "better-auth": "^1.4.13",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "drizzle-orm": "0.41.0",
