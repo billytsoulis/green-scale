@@ -22,6 +22,27 @@
       "when": 1768132337434,
       "tag": "0002_woozy_molten_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1768764078550,
+      "tag": "0003_gifted_lady_deathstrike",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1768766522173,
+      "tag": "0004_deep_madelyne_pryor",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768767724147,
+      "tag": "0005_graceful_blizzard",
+      "breakpoints": true
     }
   ]
 }

@@ -1,23 +1,25 @@
 import express from "express";
 import cors from "cors";
 import http from "http";
-// @ts-ignore
+
 import { Server } from "socket.io";
-// @ts-ignore
+
 import { auth } from "./auth"; 
-// @ts-ignore
+
 import { toNodeHandler } from "better-auth/node";
-// @ts-ignore
+
 import { cmsRouter } from "./routes/cms";
-import projectsRouter from "./routes/projects"; // GS-22: Project CRUD
-// @ts-ignore
-import cmsProjectsRouter from "./routes/cms/projects"; // GS-22: Modular Projects Layout
+import projectsRouter from "./routes/projects";
+
+import cmsProjectsRouter from "./routes/cms/projects";
+
+import usersRouter from "./routes/users"; 
 
 /**
- * GreenScale API Gateway - GS-22 Edition
- * Path: apps/api-gateway/src/index.ts
- * Purpose: Central orchestrator for Auth, CMS, and Real-time Project Sync.
- * Fix: Verified imports for better-auth compatibility with Node.js ESM.
+ * GreenScale API Gateway - Phase 1 Persistence Update
+ * Path: greenscale/apps/api-gateway/src/index.ts
+ * Purpose: Central orchestrator for Auth, CMS, and now Investor Profiles.
+ * Logic: Registers the /api/users route to handle persistent persona and intent.
  */
 
 const startServer = async () => {
@@ -87,17 +89,22 @@ const startServer = async () => {
   // @ts-ignore
   app.use("/api/cms/projects", cmsProjectsRouter);
 
+  // Phase 1 Persistence: Investor Profile Management
+  /** @ts-ignore - Route registration for persistent user data */
+  app.use("/api/users", usersRouter);
+
   /**
    * 5. Health Check & Diagnostics
    */
   app.get("/health", (req, res) => {
     res.status(200).json({ 
       status: "operational", 
-      gateway: "v2.3.0 (Auth Fixed)",
+      gateway: "v2.4.0 (Profile Persistence Active)",
       services: {
         socket: "connected",
         cms: "active",
-        auth: "ready"
+        auth: "ready",
+        profiles: "enabled" // Indicates the usersRouter is correctly mounted
       }
     });
   });
@@ -107,14 +114,15 @@ const startServer = async () => {
   if (process.env.NODE_ENV !== "test") {
     httpServer.listen(PORT, () => {
       console.log(`
-      🚀 GreenScale API Gateway (Fixed)
+      🚀 GreenScale API Gateway (Enhanced)
       -----------------------------------------
       Status:      http://localhost:${PORT}/health
       Auth:        http://localhost:${PORT}/api/auth
       CMS API:     http://localhost:${PORT}/api/cms
       Projects:    http://localhost:${PORT}/api/projects
+      Users:       http://localhost:${PORT}/api/users
       -----------------------------------------
-      Gateway stabilized. Auth module successfully mapped.
+      Investor Profile Persistence module online.
       `);
     });
   }

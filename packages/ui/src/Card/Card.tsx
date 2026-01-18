@@ -1,19 +1,22 @@
 "use client";
 
-import { ReactNode } from "react";
+import React from "react";
 
 /**
  * GreenScale Shared Card Component
- * Path: packages/ui/src/card.tsx
+ * Path: greenscale/packages/ui/src/Card/Card.tsx
  * * Luxury container for metrics, lists, and interactive sections.
+ * * Update: Added 'style' prop support for dynamic CSS values (e.g., animation delays).
  */
 
 interface CardProps {
-  children: ReactNode;
+  children: React.ReactNode;
   title?: string;
   description?: string;
-  footer?: ReactNode;
+  footer?: React.ReactNode;
   className?: string;
+  /** Inline styles for dynamic values like animation delays */
+  style?: React.CSSProperties;
   /**
    * 'elevated' for main metrics, 
    * 'flat' for lists/secondary data, 
@@ -28,6 +31,7 @@ export const Card = ({
   description,
   footer,
   className = "",
+  style,
   variant = "elevated",
 }: CardProps) => {
   const baseStyles = "rounded-[2rem] overflow-hidden transition-all duration-300";
@@ -44,16 +48,20 @@ export const Card = ({
   const hasHeader = title || description;
 
   return (
-    <div className={`${baseStyles} ${variants[variant]} ${className}`}>
+    <div 
+      className={`${baseStyles} ${variants[variant]} ${className}`} 
+      style={style} 
+      data-component="Card"
+    >
       {hasHeader && (
         <div className="p-3 pt-4 pb-0 text-center">
           {title && (
-            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest leading-none">
               {title}
             </h3>
           )}
           {description && (
-            <p className="text-slate-500 mt-1">
+            <p className="text-slate-500 mt-1 text-xs">
               {description}
             </p>
           )}

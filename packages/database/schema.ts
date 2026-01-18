@@ -12,3 +12,4 @@ export * from "./schema/cms";
 export * from "./schema/business";
 export * from "./schema/audit";
 export * from "./schema/projects"
+export * from "./schema/profiles"

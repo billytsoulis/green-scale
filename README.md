@@ -83,6 +83,14 @@ check the standalone checkbox
 - pnpm db:seed || pnpm --filter @greenscale/database db:seed
 - pnpm db:seed-cms || pnpm --filter @greenscale/database db:seed-cms
 
+### Migrations:
+- Path: greenscale/packages/database
+
+### Command: 
+- pnpm drizzle-kit generate 
+### followed by 
+- pnpm drizzle-kit push.
+
 ## Test the data
 - npx tsx test-read.ts
 - pnpm --filter @repo/ui test
