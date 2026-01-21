@@ -11,6 +11,7 @@ import usersRouter from "./routes/users";
 import authRouter from "./routes/auth"; 
 import bankingRouter from "./routes/banking";
 import fundingRouter from "./routes/funding";
+import reportsRouter from "./routes/reports";
 
 /**
  * GreenScale API Gateway - Central Orchestrator
@@ -78,6 +79,7 @@ const startServer = async () => {
   /** @ts-ignore */
   app.use("/api/banking", bankingRouter);
   app.use("/api/funding", fundingRouter);
+  app.use("/api/reports", reportsRouter);
 
   // Layer 1-3 CMS Routes
   // @ts-ignore

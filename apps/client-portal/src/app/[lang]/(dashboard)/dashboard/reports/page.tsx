@@ -18,6 +18,7 @@ export default function ReportsPage() {
   const isGreek = lang === "el";
 
   const [downloading, setDownloading] = useState(false);
+  const GATEWAY_URL = "http://localhost:3005";
 
   const metrics = [
     { label: isGreek ? "CO2 που Αποφεύχθηκε" : "CO2 Avoided", value: "1,240", unit: "tons", color: "text-emerald-500" },
@@ -25,10 +26,63 @@ export default function ReportsPage() {
     { label: isGreek ? "Κοινωνικός Αντίκτυπος" : "Social Reach", value: "12,000", unit: "lives", color: "text-blue-500" },
   ];
 
+  /**
+   * Helper: retrieveToken
+   * Standard bridge to retrieve the session JWT for the backend.
+   */
+  const retrieveToken = async () => {
+    try {
+      const res = await fetch(`${GATEWAY_URL}/api/auth/get-jwt`, { credentials: "include" });
+      if (res.ok) {
+        const { token } = await res.json();
+        return token;
+      }
+      return localStorage.getItem("gs-auth.token");
+    } catch (e) { 
+      return localStorage.getItem("gs-auth.token"); 
+    }
+  };
+
+  /**
+   * handleDownload
+   * 1. Fetches the PDF stream from the API Gateway.
+   * 2. Converts response to a Blob.
+   * 3. Triggers browser download.
+   */
   const handleDownload = async () => {
     setDownloading(true);
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    setDownloading(false);
+    try {
+      const token = await retrieveToken();
+      if (!token) throw new Error("Authentication required.");
+
+      const response = await fetch(`${GATEWAY_URL}/api/reports/impact-statement`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error("Report generation failed.");
+
+      // Process the stream as a binary blob
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      
+      // Temporary link creation to trigger native download behavior
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `GreenScale_Impact_Report_${new Date().getFullYear()}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("[Reports] Download Error:", error);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -38,30 +92,36 @@ export default function ReportsPage() {
           <h1 className="text-5xl font-serif font-black text-slate-900 tracking-tight leading-none">
             {isGreek ? "Αναφορές Αντικτύπου" : "Impact Statements"}
           </h1>
-          <p className="text-slate-500 font-medium italic">
+          <p className="text-slate-500 font-medium italic text-lg">
             {isGreek ? "Η κληρονομιά σας σε αριθμούς." : "Quantifying your planetary legacy."}
           </p>
         </div>
-        {/* Fix: Changed to high-contrast Emerald background */}
         <Button 
           onClick={handleDownload} 
           disabled={downloading}
-          className="rounded-2xl bg-emerald-950 text-white hover:bg-emerald-800 shadow-xl active:scale-95 border-none"
+          className="rounded-2xl bg-emerald-950 text-white hover:bg-emerald-800 shadow-xl active:scale-95 border-none flex items-center gap-3"
         >
-          {downloading ? (isGreek ? "Δημιουργία PDF..." : "Generating PDF...") : (isGreek ? "Λήψη Αναφοράς Q1" : "Download Q1 Statement")}
+          {downloading ? (
+            <>
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              {isGreek ? "Δημιουργία..." : "Generating..."}
+            </>
+          ) : (
+            isGreek ? "Λήψη Αναφοράς Q1" : "Download Q1 Statement"
+          )}
         </Button>
       </header>
 
-      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
         {metrics.map((m, i) => (
           <Card 
             key={i} 
             className="animate-in fade-in slide-in-from-bottom-4 duration-700" 
             style={{ animationDelay: `${i * 100}ms` }}
           >
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{m.label}</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 leading-none">{m.label}</p>
             <div className="flex items-baseline gap-2">
-               <span className={`text-5xl font-black ${m.color} tracking-tighter`}>{m.value}</span>
+               <span className={`text-5xl font-black ${m.color} tracking-tighter leading-none`}>{m.value}</span>
                <span className="text-xs font-bold text-slate-300 uppercase">{m.unit}</span>
             </div>
           </Card>
@@ -111,7 +171,7 @@ export default function ReportsPage() {
 
       <footer className="max-w-6xl mx-auto py-10 text-center">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em]">
-          {isGreek ? "GreenScale Πλατφόρμα Αναφορών v2.4" : "GreenScale Reporting Engine v2.4"}
+          {isGreek ? "GreenScale Πλατφόρμα Αναφορών v5.0" : "GreenScale Reporting Engine v5.0"}
         </p>
       </footer>
     </main>

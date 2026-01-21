@@ -91,6 +91,9 @@ check the standalone checkbox
 ### followed by 
 - pnpm drizzle-kit push.
 
+## Installation (example)
+- pnpm add react@19.2.3 react-dom@19.2.3 --filter api-gateway
+
 ## Test the data
 - npx tsx test-read.ts
 - pnpm --filter @repo/ui test
