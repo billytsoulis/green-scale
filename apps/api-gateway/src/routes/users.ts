@@ -1,4 +1,5 @@
 import { Router } from "express";
+// --- Production Ready Imports (Uncomment in local IDE) ---
 import { db, schema } from "@greenscale/database";
 import { eq } from "drizzle-orm";
 import { auth } from "../auth";
@@ -6,8 +7,8 @@ import { auth } from "../auth";
 /**
  * GreenScale API Gateway - User Profile Route
  * Path: greenscale/apps/api-gateway/src/routes/users.ts
- * Purpose: Manages investor-specific profiles, intent, and onboarding progress.
- * Logic: Links Phase 1/4 data to the core authentication session.
+ * Purpose: Manages investor-specific profiles and onboarding progress.
+ * Fix: Normalized header passing for better-auth stateless JWT validation.
  */
 
 const router: Router = Router();
@@ -15,29 +16,85 @@ const router: Router = Router();
 /**
  * GET /api/users/me
  * Retrieves the current user session and their associated investor profile.
+ * Fix: Enhanced header mapping to ensure Bearer tokens are recognized.
  */
 router.get("/me", async (req, res) => {
   try {
-    // @ts-ignore
-    const session = await auth.api.getSession({ headers: req.headers });
+    const authHeader = req.headers.authorization;
     
-    if (!session) {
-      console.warn("[Gateway] GET /me - No session/JWT found in headers.");
+    console.log("[Gateway] GET /me - Auth Audit:", {
+      hasAuthorization: !!authHeader,
+      tokenPreview: authHeader ? `${authHeader.substring(0, 20)}...` : "N/A"
+    });
+
+    /**
+     * 1. Attempt standard session retrieval.
+     * Better-Auth tries to find a session cookie or valid database session.
+     */
+    // @ts-ignore
+    let session = await auth.api.getSession({ headers: req.headers });
+    let authenticatedUser = session?.user;
+
+    /**
+     * 2. Stateless Fallback: verifyJWT
+     * If getSession yields nothing (common in pure stateless Bearer flows), 
+     * we manually verify the JWT using the shared secret.
+     */
+    if (!authenticatedUser && authHeader?.startsWith("Bearer ")) {
+      console.log("[Gateway] getSession returned null. Attempting stateless verifyJWT...");
+      const token = authHeader.split(" ")[1];
+      
+      try {
+        /**
+         * FIX: better-auth verifyJWT programmatic call.
+         * The result directly contains the 'payload' property.
+         */
+        // @ts-ignore
+        const result = await auth.api.verifyJWT({
+          headers: req.headers,
+          body: { token }
+        });
+
+        // The result contains the decoded 'payload' directly (no .response wrapper)
+        if (result?.payload) {
+          const userId = result.payload.sub;
+          console.log("[Gateway] Stateless JWT verified for Subject (UID):", userId);
+
+          // Fetch the full user from the DB to populate 'authenticatedUser'
+          // @ts-ignore
+          const [dbUser] = await db
+            .select()
+            .from(schema.users)
+            .where(eq(schema.users.id, userId));
+
+          if (dbUser) {
+            authenticatedUser = dbUser;
+          }
+        }
+      } catch (jwtErr: any) {
+        console.warn("[Gateway] Stateless verification failed:", jwtErr.message);
+      }
+    }
+
+    // 3. Final Identity Guard
+    if (!authenticatedUser) {
+      console.error("[Gateway] All identity checks failed. Rejecting request.");
       return res.status(401).json({ error: "Unauthorized session." });
     }
 
+    // 4. Fetch the extended profile from PostgreSQL
     // @ts-ignore
     const [profile] = await db
       .select()
       .from(schema.userProfiles)
-      .where(eq(schema.userProfiles.userId, session.user.id));
+      .where(eq(schema.userProfiles.userId, authenticatedUser.id));
 
     return res.json({
-      ...session.user,
+      ...authenticatedUser,
       profile: profile || null,
     });
   } catch (error: any) {
-    console.error("[Gateway Diagnostics] Profile Fetch Error:", error);
+    console.error("[Gateway Diagnostics] Profile Fetch Error:", error.message);
     return res.status(500).json({ error: "Failed to sync user context." });
   }
 });
@@ -45,36 +102,42 @@ router.get("/me", async (req, res) => {
 /**
  * PATCH /api/users/profile
  * Upserts the investor profile (Intent, Persona, KYC step).
- * Fix: Enhanced diagnostic check for both Cookies and Authorization headers.
  */
 router.patch("/profile", async (req, res) => {
   const { valueIntent, persona, kycStep, annualNetWorth } = req.body;
 
   try {
-    // --- DIAGNOSTIC CHECK: JWT FLOW ---
-    console.log("[Gateway] PATCH /profile - Authentication Audit:", {
-      origin: req.headers.origin,
-      hasCookie: !!req.headers.cookie,
-      hasAuthorization: !!req.headers.authorization,
-      // Log the first few chars of the JWT for verification without exposing the full secret
-      authPrefix: req.headers.authorization ? req.headers.authorization.substring(0, 15) + "..." : "NONE",
-    });
-
+    const authHeader = req.headers.authorization;
     // @ts-ignore
-    const session = await auth.api.getSession({ headers: req.headers });
-    
-    if (!session) {
-      console.warn("[Gateway] PATCH /profile - Stateless validation failed. No valid JWT/Session found.");
+    let session = await auth.api.getSession({ headers: req.headers });
+    let userId = session?.user?.id;
+
+    // Stateless verification fallback for PATCH
+    if (!userId && authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
+      // @ts-ignore
+      const result = await auth.api.verifyJWT({ 
+        headers: req.headers,
+        body: { token } 
+      });
+      
+      // Fix: Accessing payload directly from result
+      if (result?.payload) {
+        userId = result.payload.sub;
+      }
+    }
+
+    if (!userId) {
       return res.status(401).json({ error: "Authentication required to save profile." });
     }
 
-    console.log(`[Gateway] Authorized: Upserting profile for User: ${session.user.id}`);
+    console.log(`[Gateway] Saving profile for User: ${userId}`);
 
     // @ts-ignore
     const [updatedProfile] = await db
       .insert(schema.userProfiles)
       .values({
-        userId: session.user.id,
+        userId: userId,
         valueIntent,
         persona,
         kycStep: kycStep || 1,
@@ -95,10 +158,7 @@ router.patch("/profile", async (req, res) => {
 
     return res.json(updatedProfile);
   } catch (error: any) {
-    console.error("--- DB INTEGRITY FAILURE ---");
-    console.error("Message:", error.message);
-    console.error("---------------------------");
-
+    console.error("--- DB INTEGRITY FAILURE ---", error.message);
     return res.status(500).json({ 
       error: "Transaction failed. Database integrity check required.",
       diagnostic: error.message 

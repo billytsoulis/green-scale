@@ -97,6 +97,7 @@ check the standalone checkbox
 - pnpm --filter client-portal test:e2e
 - pnpm --filter staff-dashboard test:e2e
 - pnpm --filter api-gateway test
+- npx playwright test e2e/auth-diagnostics.spec.ts --debug
 
 ## Isolalate the tests example
 - pnpm --filter @repo/ui test -- Badge
