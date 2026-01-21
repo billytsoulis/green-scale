@@ -1,21 +1,16 @@
 import express from "express";
 import cors from "cors";
 import http from "http";
-// @ts-ignore
 import { Server } from "socket.io";
-// @ts-ignore - The Stateless JWT Configuration provided in your query
 import { auth } from "./auth"; 
-// @ts-ignore
 import { toNodeHandler } from "better-auth/node";
-// @ts-ignore
 import { cmsRouter } from "./routes/cms";
 import projectsRouter from "./routes/projects"; 
-// @ts-ignore
 import cmsProjectsRouter from "./routes/cms/projects"; 
-// @ts-ignore
 import usersRouter from "./routes/users"; 
-// @ts-ignore - Custom Auth Bridge to handle explicit /get-jwt requests
 import authRouter from "./routes/auth"; 
+import bankingRouter from "./routes/banking";
+import fundingRouter from "./routes/funding";
 
 /**
  * GreenScale API Gateway - Central Orchestrator
@@ -40,7 +35,7 @@ const startServer = async () => {
   });
 
   /**
-   * 2. Global Middleware & IO Injection
+   * 2. Global Middleware
    */
   app.use(cors({
     origin: ["http://localhost:3000", "http://localhost:5173"],
@@ -51,7 +46,7 @@ const startServer = async () => {
 
   app.use(express.json());
 
-  // Inject Socket.io into the request object for use in routes
+  // Inject Socket.io into the request object
   app.use((req: any, res, next) => {
     req.io = io;
     next();
@@ -63,11 +58,6 @@ const startServer = async () => {
   io.on("connection", (socket: any) => {
     socket.on("portal:join-preview", (previewId: string) => {
       socket.join(`preview-${previewId}`);
-      console.log(`📡 [SOCKET] Portal joined room: preview-${previewId}`);
-    });
-
-    socket.on("disconnect", () => {
-      console.log("📡 [SOCKET] Client disconnected");
     });
   });
 
@@ -75,32 +65,34 @@ const startServer = async () => {
    * 4. Route Handlers
    */
   
-  // Phase 2 Stability: Custom Auth Bridge
-  /** * CRITICAL FIX: We mount authRouter here to explicitly handle GET /api/auth/get-jwt.
-   * This takes precedence over the generic handler to resolve 404 pathing errors.
-   * @ts-ignore 
-   */
+  // Phase 2: Custom Auth Bridge
+  // CRITICAL: Mounted BEFORE generic handler to catch /get-jwt.
+  /** @ts-ignore */
   app.use("/api/auth", authRouter);
 
-  // Generic Auth Routes - Handled via Better-Auth Node adapter
-  // Note: Better-Auth internal routes will be available at /api/auth/*
+  // Better-Auth Core Handlers
   // @ts-ignore
   app.all("/api/auth/*", toNodeHandler(auth));
   
+  // Phase 3: Banking & Asset Ledger (Server-side Math)
+  /** @ts-ignore */
+  app.use("/api/banking", bankingRouter);
+  app.use("/api/funding", fundingRouter);
+
   // Layer 1-3 CMS Routes
   // @ts-ignore
   app.use("/api/cms", cmsRouter);
 
-  // GS-22: Project Management & Public Catalog
+  // Project Management API
   // @ts-ignore
   app.use("/api/projects", projectsRouter);
   
-  // GS-22: Modular CMS Layout for Projects page
+  // Modular Projects Page CMS Layout
   // @ts-ignore
   app.use("/api/cms/projects", cmsProjectsRouter);
 
-  // Investor Profile Management (Phase 1 Persistence)
-  /** @ts-ignore - Handles /api/users/profile updates */
+  // User Profile Management
+  /** @ts-ignore */
   app.use("/api/users", usersRouter);
 
   /**
@@ -109,12 +101,11 @@ const startServer = async () => {
   app.get("/health", (req, res) => {
     res.status(200).json({ 
       status: "operational", 
-      gateway: "v2.5.0 (Auth Bridge Active)",
+      gateway: "v3.0.0 (Phase 3 Active)",
       services: {
-        socket: "connected",
-        cms: "active",
-        auth: "ready",
-        profiles: "enabled"
+        banking: "ledger-online",
+        auth: "bridge-active",
+        profiles: "sync-enabled"
       }
     });
   });
@@ -124,13 +115,14 @@ const startServer = async () => {
   if (process.env.NODE_ENV !== "test") {
     httpServer.listen(PORT, () => {
       console.log(`
-      🚀 GreenScale API Gateway (Stateless JWT Enabled)
+      🚀 GreenScale API Gateway (Phase 3 Ledger Active)
       -----------------------------------------
       Status:      http://localhost:${PORT}/health
+      Banking API: http://localhost:${PORT}/api/banking/sync
       Auth Bridge: http://localhost:${PORT}/api/auth/get-jwt
       Users API:   http://localhost:${PORT}/api/users
       -----------------------------------------
-      Gateway stabilized. Bridge correctly mapped to Stateless configuration.
+      Server-side asset normalization and weighted ESG math active.
       `);
     });
   }

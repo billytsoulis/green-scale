@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Leaf, Zap, ArrowRight } from "lucide-react";
-import { Button, Card, Badge } from "@repo/ui";
+import { Card, Badge } from "@repo/ui";
+import { io } from "socket.io-client";
+
 /**
  * Project Card Component
  * Path: apps/client-portal/src/components/theme/ProjectCard.tsx
@@ -33,10 +35,39 @@ interface ProjectCardProps {
 export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
   const isGreek = lang === "el";
   const content = isGreek ? project.contentEl : project.contentEn;
-  
-  const totalGoal = project.fundingStatus?.totalGoal || 1;
-  const currentRaised = project.fundingStatus?.currentRaised || 0;
-  const progress = (currentRaised / totalGoal) * 100;
+
+  // 1. Real-Time State Management (Phase 5 Integrated)
+  const [funding, setFunding] = useState({
+    currentRaised: parseFloat(project.fundingStatus?.currentRaised || 0),
+    investorCount: project.fundingStatus?.investorCount || 0,
+    totalGoal: parseFloat(project.fundingStatus?.totalGoal || 1)
+  });
+
+  const GATEWAY_URL = "http://localhost:3005";
+
+  // 2. WebSocket Orchestration
+  useEffect(() => {
+    const socket = io(GATEWAY_URL);
+
+    // @ts-ignore
+    socket.on("project:update", (data: any) => {
+      if (data.projectId === project.id) {
+        console.log(`📡 [Live] Project ${project.id} updated via Socket.io`);
+        setFunding(prev => ({
+          ...prev,
+          currentRaised: parseFloat(data.currentRaised),
+          investorCount: data.investorCount
+        }));
+      }
+    });
+
+    return () => {
+      // @ts-ignore
+      socket.disconnect();
+    };
+  }, [project.id]);
+
+  const progress = (funding.currentRaised / funding.totalGoal) * 100;
 
   return (
     // @ts-ignore
@@ -44,26 +75,20 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
       variants={itemVariants}
       layout
       className="group relative h-full" 
-      data-project={project.id} // CRITICAL: Fix for Playwright E2E
+      data-project={project.id} 
       data-component="ProjectCard"
     >
       {/* @ts-ignore */}
-      <Card className="p-8 h-full flex flex-col bg-white hover:shadow-[0_60px_100px_-30px_rgba(6,95,70,0.15)] border-slate-100 group-hover:border-emerald-200/50 group-hover:bg-emerald-50/10 transition-all duration-700 rounded-[2.5rem]">
+      <Card className="p-8 h-full flex flex-col bg-white hover:shadow-[0_60px_100px_-30px_rgba(6,95,70,0.15)] border-slate-100 group-hover:border-emerald-200/50 group-hover:bg-emerald-50/10 transition-all duration-700 rounded-[2.5rem] border border-solid">
         
-        {/* Centered Header Section */}
+        {/* Centered Header Section (Restored Original Layout) */}
         <div className="flex flex-col items-center text-center mb-10 gap-5">
            {/* @ts-ignore */}
            <motion.div 
               whileHover={{ scale: 1.05, rotate: -2 }}
               className="w-16 h-16 bg-gradient-to-br from-slate-50 to-white rounded-2xl flex items-center justify-center group-hover:from-emerald-50 group-hover:to-white transition-all duration-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.02),0_4px_12px_rgba(0,0,0,0.03)] border border-slate-50 group-hover:border-emerald-100"
             >
-              {project.category === "Renewable Energy" ? (
-                // @ts-ignore
-                <Zap size={26} className="text-amber-500 group-hover:text-amber-600 transition-colors" />
-              ) : (
-                // @ts-ignore
-                <Leaf size={26} className="text-emerald-500 group-hover:text-emerald-600 transition-colors" />
-              )}
+              {project.category === "Renewable Energy" ? <Zap /> : <Leaf />}
             </motion.div>
 
             <div className="flex flex-col items-center gap-2">
@@ -71,12 +96,15 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
                  {project.category}
                </span>
                {/* @ts-ignore */}
-               <Badge variant={project.esgScore > 90 ? "gold" : "success"} className="shadow-sm">
+               <Badge 
+                 variant={project.esgScore > 90 ? "gold" : "success"} 
+                 className={`shadow-sm ${project.esgScore > 90 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`}
+               >
                   {project.esgScore > 90 && "Elite "}Impact: {project.esgScore}/100
                </Badge>
                <div className="flex items-center gap-1.5 opacity-40 group-hover:opacity-100 transition-opacity">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Live Allocation</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Live Allocation Active</span>
                </div>
             </div>
         </div>
@@ -89,11 +117,11 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
           <p className="text-slate-500 text-sm font-medium leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all duration-500">
             {isGreek 
               ? "Επένδυση σε βιώσιμες υποδομές με υψηλή απόδοση." 
-              : "Investment in sustainable infrastructure with high yield."}
+              : "Investment in sustainable infrastructure with verified high yield."}
           </p>
         </div>
 
-        {/* Financial Metrics */}
+        {/* Financial Metrics (Phase 5 Dynamic Data) */}
         <div className="mt-10 space-y-6">
            <div className="grid grid-cols-2 gap-4">
               <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100/50 group-hover:bg-white group-hover:border-emerald-100/50 transition-all duration-500 text-left">
@@ -101,14 +129,12 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
                 <p className="text-xl font-black text-slate-800 tracking-tight">{project.targetIrr}%</p>
               </div>
               <div className="p-5 bg-slate-50/50 rounded-2xl border border-slate-100/50 group-hover:bg-white group-hover:border-emerald-100/50 transition-all duration-500 text-left">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Min. Entry</p>
-                <p className="text-xl font-black text-slate-800 tracking-tight">
-                  ${project.minInvestment ? parseInt(project.minInvestment).toLocaleString() : "0"}
-                </p>
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{isGreek ? "Επενδυτές" : "Investors"}</p>
+                <p className="text-xl font-black text-slate-800 tracking-tight">{funding.investorCount}</p>
               </div>
            </div>
 
-           {/* Progress Indicator */}
+           {/* Progress Indicator (Restored Framer Motion Animation) */}
            <div className="space-y-3">
               <div className="flex justify-between items-end">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic opacity-60">Funding Status</p>
@@ -123,10 +149,14 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
                   className="h-full bg-gradient-to-r from-emerald-500 to-emerald-600" 
                 />
               </div>
+              <div className="flex justify-between text-[9px] font-bold text-slate-300 uppercase tracking-tighter">
+                <span>Raised: €{funding.currentRaised.toLocaleString()}</span>
+                <span>Goal: €{funding.totalGoal.toLocaleString()}</span>
+              </div>
            </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer (Restored Original whileHover reveal) */}
         {/* @ts-ignore */}
         <motion.div 
           initial={{ opacity: 0, height: 0 }}
@@ -134,16 +164,15 @@ export const ProjectCard = ({ project, lang }: ProjectCardProps) => {
           className="overflow-hidden mt-6"
         >
           <div className="pt-6 border-t border-emerald-100/30 flex justify-between items-center">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-left">
               <div className="p-1.5 bg-emerald-50 rounded-full">
-                {/* @ts-ignore */}
-                <ShieldCheck size={14} className="text-emerald-600" />
+                <ShieldCheck />
               </div>
-              <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest">GS-Verified Audit</span>
+              <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest leading-none">GS-Verified Audit</span>
             </div>
             {/* @ts-ignore */}
-            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-900 flex items-center gap-1.5 hover:gap-2.5 transition-all">
-              Prospectus <ArrowRight size={12} />
+            <button className="text-[10px] font-black uppercase tracking-widest text-emerald-900 flex items-center gap-1.5 hover:gap-2.5 transition-all bg-transparent border-none cursor-pointer">
+              Prospectus <ArrowRight />
             </button>
           </div>
         </motion.div>
