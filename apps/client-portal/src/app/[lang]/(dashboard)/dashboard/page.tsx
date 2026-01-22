@@ -7,6 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ESGDial } from "@/components/dashboard/ESGDial";
 import { NotificationHub } from "@/components/dashboard/NotificationHub";
 import { ImpactVelocityChart } from "@/components/dashboard/ImpactVelocityChart";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { PortfolioIcon, AlertIcon } from "@repo/ui/icons";
 import { useAuth } from "@/hooks/useAuth";
 import { useDiscoveryStore } from "@/store/useDiscoveryStore";
@@ -65,29 +66,24 @@ export default function DashboardPage() {
       } catch (err) {
         console.error("Ledger Sync Failed", err);
       } finally {
-        setSyncing(false);
+        // Institutional simulation for skeleton visibility
+        setTimeout(() => setSyncing(false), 800);
       }
     };
 
     syncLedger();
   }, [isAuthenticated, authLoading]);
 
-  if (authLoading || syncing) return (
-    <div className="h-screen flex items-center justify-center bg-slate-50">
-      <div className="text-center space-y-6">
-        <div className="w-10 h-10 border-[3px] border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto shadow-sm" />
-        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-400 animate-pulse">
-          {isGreek ? "ΣΥΓΧΡΟΝΙΣΜΟΣ ΠΕΡΙΟΥΣΙΑΣ..." : "NORMALIZING ASSET LEDGER..."}
-        </p>
-      </div>
-    </div>
-  );
+  /**
+   * GS-31 Fix: Replaced simple spinner with the professional skeleton UI.
+   */
+  if (authLoading || syncing) return <DashboardSkeleton />;
 
   const aggregateScore = summary?.aggregateScore || 0;
   const totalAUM = summary?.totalValue || 0;
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6 lg:p-16 space-y-12" data-component="InvestorDashboard">
+    <main className="min-h-screen bg-slate-50 p-6 lg:p-16 space-y-12 animate-in fade-in duration-700" data-component="InvestorDashboard">
       
       {/* Header Section */}
       <header className="flex justify-between items-center max-w-7xl mx-auto text-left">
@@ -135,7 +131,7 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Right Column: Asset Grid & Historical Trend */}
+        {/* Right Column: Asset Grid */}
         <section className="lg:col-span-8 space-y-12">
           {/* AUM Summary Bar */}
           <div className="flex flex-col sm:flex-row justify-between items-center bg-emerald-950 px-10 py-10 rounded-[3rem] shadow-2xl text-left gap-6 border border-emerald-800">
@@ -153,7 +149,6 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* holdings grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {assets.map((asset) => (
               <div key={asset.id} className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 text-left space-y-8 hover:shadow-xl hover:border-emerald-100 transition-all group relative overflow-hidden">
@@ -176,7 +171,6 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          {/* GS-30: Impact Velocity Section */}
           <ImpactVelocityChart lang={lang} />
         </section>
       </div>

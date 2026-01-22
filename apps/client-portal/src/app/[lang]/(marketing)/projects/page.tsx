@@ -18,11 +18,6 @@ export default function ProjectsPage() {
   const params = useParams();
   const lang = (params?.lang as string) || "en";
 
-  /**
-   * Mocked CMS Data Structure
-   * In the final production environment, this data is fetched from the API Gateway:
-   * GET /api/cms/layout/projects
-   */
   const pageData = {
     hero: {
       badge: lang === "el" ? "Το Μητρώο Επενδυτών" : "The Investor Registry",
@@ -47,16 +42,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-white" data-component="ProjectsPage">
-      {/* Layer 2: Modular Block Orchestration 
-        Instead of a monolithic file, we now call atomic blocks.
-      */}
-      
-      {/* 1. Project Hero Block */}
-      {/* @ts-ignore */}
       <ProjectHeroBlock data={pageData.hero} />
-
-      {/* 2. Project Directory Block (Handles both bilingual labels and Data-fetching logic) */}
-      {/* @ts-ignore */}
       <ProjectDirectoryBlock 
         lang={lang} 
         data={pageData.directory} 
