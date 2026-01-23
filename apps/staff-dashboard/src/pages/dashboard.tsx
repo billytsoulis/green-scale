@@ -14,8 +14,7 @@
 import { 
   Button, 
   Card, 
-  Badge, 
-  DataTable, 
+  Badge,
   DriftIcon 
 } from "@repo/ui";
 import { authClient } from "../lib/auth-client";
@@ -122,7 +121,7 @@ export default function StaffDashboard() {
                     </td>
                     <td className="px-8 py-5 text-right">
                       {/* @ts-ignore */}
-                      <Button variant="ghost" className="text-emerald-700 font-bold hover:underline !p-0">
+                      <Button variant="ghost" className="text-emerald-700 font-bold hover:underline p-0!">
                         Fix Drift
                       </Button>
                     </td>

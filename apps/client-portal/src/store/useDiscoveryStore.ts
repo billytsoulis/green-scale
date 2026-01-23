@@ -1,6 +1,4 @@
-// @ts-ignore
 import { create } from "zustand";
-// @ts-ignore
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 /**
