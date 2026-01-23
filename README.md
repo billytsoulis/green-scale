@@ -111,3 +111,6 @@ Now we have implement the landing page, the about us and the contact page
 - lsof -i :3000 then kill -9 <PID>
 - lsof -i :5173 then kill -9 <PID>
 - lsof -i :3005 then kill -9 <PID>
+
+## Enable Python env
+- source venv/bin/activate

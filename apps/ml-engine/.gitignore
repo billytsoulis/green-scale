@@ -1,0 +1,27 @@
+greenscale/apps/ml-engine/.gitignore
+
+1. Python Environment
+
+venv/
+ENV/
+env/
+.env
+
+2. Big Data Storage (Crucial)
+
+We do not commit the 10,000 generated records to Git
+
+data/*
+# data/.parquet
+# data/historical/.parquet
+
+3. Python Cache
+
+pycache/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+4. OS Files
+
+.DS_Store

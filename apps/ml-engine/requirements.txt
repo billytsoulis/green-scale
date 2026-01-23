@@ -1,5 +1,11 @@
 fastapi
 uvicorn
 pandas
+numpy
 scikit-learn
 pydantic
+elasticsearch
+faker
+python-multipart
+httpx
+pyarrow

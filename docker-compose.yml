@@ -1,4 +1,5 @@
-# Location: /home/YOUR_USER/projects/greenscale/docker-compose.yml
+# File Path: greenscale/docker-compose.yml
+# Purpose: Full-Stack Command Center (Postgres + Redis + Elasticsearch 8.17 + GUIs)
 
 services:
   # PostgreSQL: The Primary Financial Database
@@ -28,7 +29,6 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
       - "5050:80"
-    # Permanent Solution: Added volume to persist pgAdmin settings and server registrations
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     depends_on:
@@ -54,7 +54,6 @@ services:
     container_name: greenscale-redis-insight
     ports:
       - "8001:5540"
-    # Permanent Solution: Added volume to persist Redis Insight connections
     volumes:
       - redis_insight_data:/db
     depends_on:
@@ -66,7 +65,42 @@ services:
       timeout: 5s
       retries: 5
 
+  # Elasticsearch: Big Data Analytical Engine (Upgraded to 8.17.0)
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    container_name: greenscale-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  # Kibana: Institutional Data Explorer (Upgraded to 8.17.0)
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    container_name: greenscale-kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+  # Elasticvue: The "pgAdmin" for Elasticsearch (Simple Browser UI)
+  # Accessible at http://localhost:8080
+  elasticvue:
+    image: cars10/elasticvue
+    container_name: greenscale-elasticvue
+    ports:
+      - "8080:8080"
+    depends_on:
+      - elasticsearch
+
 volumes:
   postgres_data:
+  es_data:
   pgadmin_data:       # Persistent storage for pgAdmin
   redis_insight_data: # Persistent storage for Redis Insight
