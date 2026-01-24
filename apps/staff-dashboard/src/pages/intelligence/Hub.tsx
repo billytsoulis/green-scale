@@ -1,6 +1,4 @@
-"use client";
-
-// import React from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Institutional Intelligence Hub (Phase 6 Entry)
@@ -35,8 +33,44 @@ const SandboxIcon = () => (
   </svg>
 );
 
+const ML_ENGINE_URL = "http://localhost:8000";
+
 export default function IntelligenceHub() {
-  
+  const [systemStats, setSystemStats] = useState({
+    total_indexed: 0,
+    sync_state: "CONNECTING",
+    latency: "..."
+  });
+
+  /**
+   * System Health Lifecycle
+   * Logic: Polls the FastAPI /ml/stats endpoint to verify index integrity.
+   */
+  useEffect(() => {
+    const fetchStatus = async () => {
+      try {
+        const start = performance.now();
+        const res = await fetch(`${ML_ENGINE_URL}/ml/stats`);
+        const end = performance.now();
+        
+        if (res.ok) {
+          const data = await res.json();
+          setSystemStats({
+            total_indexed: data.total_indexed,
+            sync_state: data.sync_state,
+            latency: `${Math.round(end - start)}ms`
+          });
+        }
+      } catch (err) {
+        setSystemStats(prev => ({ ...prev, sync_state: "OFFLINE" }));
+      }
+    };
+
+    fetchStatus();
+    const interval = setInterval(fetchStatus, 30000); // Pulse check every 30s
+    return () => clearInterval(interval);
+  }, []);
+
   const tools = [
     {
       id: "overview",
@@ -64,7 +98,7 @@ export default function IntelligenceHub() {
       icon: <SandboxIcon />,
       color: "text-amber-500",
       bg: "bg-amber-50/50",
-      locked: true // For future expansion
+      locked: true 
     }
   ];
 
@@ -93,7 +127,7 @@ export default function IntelligenceHub() {
         </h1>
         <p className="text-xl text-slate-400 font-medium max-w-2xl mt-4">
           Access deep-tier ESG analytics and ML-driven company insights. 
-          The engine is currently indexing <span className="text-slate-900 font-bold">10,000 active tickers</span>.
+          The engine is currently indexing <span className="text-slate-900 font-bold">{systemStats.total_indexed.toLocaleString()} active tickers</span>.
         </p>
       </header>
 
@@ -157,21 +191,25 @@ export default function IntelligenceHub() {
          <div className="p-8 bg-slate-900 rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-8 text-white shadow-2xl">
             <div className="flex items-center gap-6">
                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                  <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
+                  <div className={`w-3 h-3 rounded-full animate-pulse shadow-[0_0_10px_currentColor] ${systemStats.sync_state === 'OFFLINE' ? 'bg-red-500 text-red-500' : 'bg-emerald-500 text-emerald-500'}`} />
                </div>
                <div className="text-left">
                   <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">FastAPI Connection</p>
-                  <p className="font-bold text-white uppercase">ML-Engine v1.0.4 Operational</p>
+                  <p className="font-bold text-white uppercase tracking-tight">
+                    ML-Engine v1.0.4 {systemStats.sync_state === 'OFFLINE' ? 'Disconnected' : 'Operational'}
+                  </p>
                </div>
             </div>
             <div className="flex gap-8">
                <div className="text-center">
                   <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Index State</p>
-                  <p className="font-mono text-emerald-400 font-bold">SYNCHRONIZED</p>
+                  <p className={`font-mono font-bold ${systemStats.sync_state === 'OFFLINE' ? 'text-red-400' : 'text-emerald-400'}`}>
+                    {systemStats.sync_state}
+                  </p>
                </div>
                <div className="text-center">
                   <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Latency</p>
-                  <p className="font-mono text-white font-bold">14ms</p>
+                  <p className="font-mono text-white font-bold">{systemStats.latency}</p>
                </div>
             </div>
          </div>

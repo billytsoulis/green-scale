@@ -1,53 +1,69 @@
 # greenscale/apps/ml-engine/main.py
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from api.routes import router
 from services.intelligence import intelligence_service
 from services.elasticsearch_service import es_service
 
 """
-GreenScale ML Engine: Professional Microservice Orchestrator
+GreenScale ML Engine: Production Entry Point
 Path: apps/ml-engine/main.py
-Fix: Resolved NameError by ensuring es_service is correctly imported.
-Logic: Orchestrates the 'Hydrate & Sync' pattern within the modern Lifespan manager.
+Logic: Orchestrates the modular Intelligence Service and Elasticsearch synchronization.
+Update: Integrated CORSMiddleware to allow institutional dashboard access (GS-33).
 """
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Lifecycle Manager: Handles startup and shutdown logic.
-    Coordinates dependencies between local Parquet data and the Elasticsearch index.
+    Institutional Data Lifecycle Management
+    1. Hydrate RAM: Load Parquet files using the modular Data Loader.
+    2. Synchronize ES: Push the hydrated DataFrame to the Elasticsearch index.
     """
-    # 1. STARTUP: Hydrate our Big Data Parquet files into memory (Pandas)
-    print("🚀 [Lifecycle] Initializing ML Engine...")
+    print("🚀 [Lifecycle] Initializing Institutional Intelligence Layer...")
+    
+    # Hydrate the modular service
     intelligence_service.hydrate_engine()
     
-    # 2. STARTUP: Sync the hydrated data to Elasticsearch for analytical search
-    # We check if universe_df is populated before attempting synchronization
+    # Sync with Elasticsearch analytical search index
     if intelligence_service.universe_df is not None:
         print("🔍 [Lifecycle] Synchronizing Search Index with Elasticsearch...")
-        # Awaiting the async sync operation from the es_service
         await es_service.sync_universe(intelligence_service.universe_df)
     else:
-        print("⚠️ [Lifecycle] Skipping Elasticsearch sync: No data found in memory.")
+        print("⚠️ [Lifecycle] Sync Aborted: Source Parquet files not found.")
     
-    yield # The application serves requests here
+    yield
     
-    # 3. SHUTDOWN: Resource cleanup
-    print("🛑 [Lifecycle] Shutting down ML Engine...")
+    print("🛑 [Lifecycle] Shutting down Intelligence Engine...")
 
 app = FastAPI(
     title="GreenScale Intelligence Engine",
-    description="Big Data AI service for ESG drift prediction and portfolio optimization.",
-    version="1.0.0",
+    description="Big Data Analytical Core for ESG Prediction and Anomaly Detection",
+    version="1.0.4",
     lifespan=lifespan
 )
 
-# Include the modular routes
+# GS-33 Fix: CORS Configuration
+# Logic: Explicitly allows the Vite dev server (5173) to perform GET/POST 
+# analytical requests against the Python engine.
+origins = [
+    "http://localhost:5173",  # Staff Dashboard
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Attach routes
 app.include_router(router)
 
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn.run uses the string import to enable hot-reloading correctly
+    # Defaulting to port 8000 for standard ML service discovery
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

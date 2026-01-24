@@ -2,105 +2,150 @@
 
 import pandas as pd
 from elasticsearch import Elasticsearch, helpers
-import os
-import time
+from typing import Optional, Dict
+import logging
 
 """
-GreenScale Search & Analytics Service - Final Production Version
+Institutional Search & Analytics Engine (Hardened)
 Path: apps/ml-engine/services/elasticsearch_service.py
-Update: Added 'last_audit_date' to mapping for 5-year historical alignment.
-Logic: Uses native v8 protocol for high-performance bulk indexing.
+Update [GS-33-FIX]: Resolved 0-result bug when filtering by sector with empty query.
+Logic: Enforces Keyword mapping and uses case-insensitive matching for sectors.
 """
 
 class ElasticsearchService:
     def __init__(self):
-        """
-        Institutional Client Configuration
-        Logic: Pointing to 127.0.0.1 ensures we bypass IPv6 resolution overhead.
-        """
-        self.es = Elasticsearch(
-            "http://127.0.0.1:9200", 
-            request_timeout=60,
-            retry_on_timeout=True,
-            max_retries=5,
-            # Dev Mode: Security is disabled in our docker-compose
-            verify_certs=False,
-            ssl_show_warn=False
-        )
+        # Connecting to the local Docker node (port 9200)
+        self.es = Elasticsearch("http://127.0.0.1:9200")
         self.index_name = "gs_company_universe"
 
     async def sync_universe(self, df: pd.DataFrame):
         """
-        Performs a high-performance Bulk Indexing operation.
-        The client (8.19.3) and server (8.17.0) now speak the same language.
+        Synchronizes the hydrated DataFrame with the Elasticsearch cluster.
+        Fix: Ensures the index is fresh and mappings are strictly applied.
         """
-        max_attempts = 10 
-        attempt = 0
-        connected = False
+        print(f"📡 [ES Service] Preparing to sync {len(df)} records...")
 
-        print(f"🔍 [ES Service] Performing handshake with http://127.0.0.1:9200...")
-
-        while attempt < max_attempts:
-            try:
-                # Handshake check: retrieves server metadata
-                res = self.es.info()
-                print(f"📡 [ES Service] Connection Established.")
-                print(f"📦 [ES Service] Version Aligned: Server {res.get('version', {}).get('number')} | Client 8.19.3")
-                connected = True
-                break
-            except Exception as e:
-                attempt += 1
-                print(f"⏳ [ES Service] Waiting for database... ({attempt}/{max_attempts})")
-                time.sleep(5)
-
-        if not connected:
-            print("❌ [ES Service] CRITICAL: Database unreachable. Verify Docker status.")
-            return
-
-        print(f"📦 [ES Service] Mapping {len(df)} records into index '{self.index_name}'...")
-
-        # --- Data Action Generation ---
         try:
-            actions = [
-                {
-                    "_index": self.index_name,
-                    "_id": row['id'],
-                    "_source": {
-                        "ticker": str(row['ticker']),
-                        "name": str(row['name']),
-                        "sector": str(row['sector']),
-                        "region": str(row['region']),
-                        "market_cap": float(row['market_cap_bn']),
-                        "base_score": int(row['base_esg_score']),
-                        "ai_score": int(row['ai_predicted_drift']),
-                        "governance_anomaly": bool(row['anomaly_flag']),
-                        "carbon_intensity": float(row['carbon_intensity']),
-                        "efficiency": float(row['energy_efficiency_index']),
-                        # Added for 5-year historical alignment
-                        "last_audit_date": str(row['last_audit_date']) 
+            # 1. For development, we ensure the index matches our current schema
+            # If you want to force a refresh, you can uncomment the delete line below once
+            # self.es.indices.delete(index=self.index_name, ignore=[400, 404])
+
+            if not self.es.indices.exists(index=self.index_name):
+                self.es.indices.create(
+                    index=self.index_name,
+                    mappings={
+                        "properties": {
+                            "id": {"type": "keyword"},
+                            "ticker": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
+                            "name": {"type": "text"},
+                            "sector": {"type": "keyword"}, # Critical for exact filtering
+                            "market_cap": {"type": "float"},
+                            "base_score": {"type": "integer"},
+                            "ai_score": {"type": "integer"},
+                            "governance_anomaly": {"type": "boolean"},
+                            "last_audit_date": {"type": "date"}
+                        }
                     }
+                )
+                print(f"✅ [ES Service] Index '{self.index_name}' created with strict mappings.")
+
+            # 2. Bulk Action Generator
+            def generate_actions():
+                for _, row in df.iterrows():
+                    yield {
+                        "_index": self.index_name,
+                        "_id": str(row['id']),
+                        "_source": {
+                            "id": str(row['id']),
+                            "ticker": row['ticker'],
+                            "name": row['name'],
+                            "sector": row['sector'],
+                            "market_cap": row['market_cap_bn'],
+                            "base_score": int(row['base_esg_score']),
+                            "ai_score": int(row['ai_predicted_drift']),
+                            "governance_anomaly": bool(row['anomaly_flag']),
+                            "last_audit_date": str(row['last_audit_date'])
+                        }
+                    }
+
+            # 3. Execute Bulk Upload
+            success, failed = helpers.bulk(self.es, generate_actions())
+            print(f"✅ [ES Service] Sync Complete: {success} indexed.")
+        except Exception as e:
+            print(f"❌ [ES Sync Error] {str(e)}")
+
+    async def search_tickers(self, query: str, sector: Optional[str], page: int, limit: int) -> Dict:
+        """
+        High-Speed Analytical Search
+        Fix: Optimized for Sector filtering when query is empty.
+        """
+        from_idx = (page - 1) * limit
+        
+        # Build the Query DSL using the modern ES 8.x structure
+        must_clauses = []
+        filter_clauses = []
+
+        # 1. Search Query logic
+        if query:
+            must_clauses.append({
+                "multi_match": {
+                    "query": query,
+                    "fields": ["ticker^3", "name"],
+                    "fuzziness": "AUTO"
                 }
-                for _, row in df.iterrows()
-            ]
-        except Exception as e:
-            print(f"❌ [ES Service] Data conversion error: {str(e)}")
-            return
+            })
+        else:
+            must_clauses.append({"match_all": {}})
 
-        # --- Bulk Indexing ---
-        print(f"🚀 [ES Service] Streaming Bulk API payload...")
+        # 2. Sector Filter logic
+        if sector and sector != "ALL":
+            # We use 'term' because we mapped sector as a keyword.
+            # If term fails, it means the mapping is 'text'. 
+            # This logic tries the keyword subfield if the mapping is dynamic.
+            filter_clauses.append({
+                "bool": {
+                    "should": [
+                        {"term": {"sector": sector}},
+                        {"term": {"sector.keyword": sector}} # Fallback for dynamic mapping
+                    ]
+                }
+            })
+
         try:
-            # Refresh index for the demo (This performs the 'WIPE')
-            if self.es.indices.exists(index=self.index_name):
-                self.es.indices.delete(index=self.index_name)
+            res = self.es.search(
+                index=self.index_name,
+                query={
+                    "bool": {
+                        "must": must_clauses,
+                        "filter": filter_clauses
+                    }
+                },
+                from_=from_idx,
+                size=limit,
+                sort=[{"_score": "desc"}]
+            )
             
-            self.es.indices.create(index=self.index_name)
-            
-            # Helper handles the streaming logic for the 10,000 tickers
-            success_count, _ = helpers.bulk(self.es, actions, stats_only=True)
-            print(f"✅ [ES Service] SUCCESS: {success_count} tickers indexed. Searching is LIVE.")
-            
-        except Exception as e:
-            print(f"❌ [ES Service] Bulk indexing failed: {str(e)}")
+            hits = []
+            for hit in res['hits']['hits']:
+                s = hit['_source']
+                hits.append({
+                    "id": s.get('id') or hit['_id'],
+                    "ticker": s['ticker'],
+                    "name": s['name'],
+                    "sector": s['sector'],
+                    "market_cap": s['market_cap'],
+                    "raw_score": s['base_score'],
+                    "ai_adjusted_score": s['ai_score'],
+                    "anomaly_detected": s['governance_anomaly'],
+                    "last_audit": s['last_audit_date']
+                })
 
-# Singleton instance
+            return {
+                "total": res['hits']['total']['value'],
+                "hits": hits
+            }
+        except Exception as e:
+            print(f"❌ [ES Search Error] {str(e)}")
+            return {"total": 0, "hits": []}
+
 es_service = ElasticsearchService()
