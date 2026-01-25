@@ -114,3 +114,4 @@ Now we have implement the landing page, the about us and the contact page
 
 ## Enable Python env
 - source venv/bin/activate
+- uvicorn main:app --reload

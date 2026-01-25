@@ -16,9 +16,10 @@ import BlockEditorSwitcher from "./pages/cms/BlockEditors/BlockEditorSwitcher";
 import ProjectList from "./pages/projects/ProjectList";
 import ProjectEditor from "./pages/projects/ProjectEditor";
 
-import IntelligenceHub from "./pages/intelligence/Hub";
-import IntelligenceOverview from "./pages/intelligence/Overview";
-import IntelligenceDiscovery from "./pages/intelligence/Discovery";
+import IntelligenceHub from "./pages/intelligence/Hub/index.tsx";
+import IntelligenceOverview from "./pages/intelligence/Overview/index.tsx";
+import IntelligenceDiscovery from "./pages/intelligence/Discovery/index.tsx";
+import IntelligenceForge from "./pages/intelligence/Forge/index.tsx";
 import { StaffLayout } from "./layout/StaffLayout";
 import { authClient } from "./lib/auth-client";
 
@@ -58,6 +59,8 @@ function App() {
           <Route path="/intelligence" element={<IntelligenceHub />} />
           <Route path="/intelligence/overview" element={<IntelligenceOverview />} />
           <Route path="/intelligence/search" element={<IntelligenceDiscovery />} />
+
+          <Route path="/intelligence/forge/:ticker" element={<IntelligenceForge />} />
           
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
@@ -71,3 +74,7 @@ function App() {
 }
 
 export default App;
+
+// import IntelligenceHub from "./pages/intelligence/Hub";
+// import IntelligenceOverview from "./pages/intelligence/Overview";
+// import IntelligenceDiscovery from "./pages/intelligence/Discovery";

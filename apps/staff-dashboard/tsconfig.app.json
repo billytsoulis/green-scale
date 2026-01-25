@@ -11,7 +11,15 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    
+    /**
+     * VERBATIM MODULE SYNTAX:
+     * This is a senior-level TS 5.x setting. 
+     * It enforces the use of 'import type' for interfaces.
+     * DO NOT CHANGE THIS - it ensures clean build artifacts.
+     */
     "verbatimModuleSyntax": true,
+    
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
