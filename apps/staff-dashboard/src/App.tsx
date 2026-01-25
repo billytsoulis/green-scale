@@ -20,6 +20,8 @@ import IntelligenceHub from "./pages/intelligence/Hub/index.tsx";
 import IntelligenceOverview from "./pages/intelligence/Overview/index.tsx";
 import IntelligenceDiscovery from "./pages/intelligence/Discovery/index.tsx";
 import IntelligenceForge from "./pages/intelligence/Forge/index.tsx";
+import IntelligenceSandbox from "./pages/intelligence/Sandbox/index.tsx";
+
 import { StaffLayout } from "./layout/StaffLayout";
 import { authClient } from "./lib/auth-client";
 
@@ -61,6 +63,7 @@ function App() {
           <Route path="/intelligence/search" element={<IntelligenceDiscovery />} />
 
           <Route path="/intelligence/forge/:ticker" element={<IntelligenceForge />} />
+          <Route path="/intelligence/sandbox" element={<IntelligenceSandbox />} />
           
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
