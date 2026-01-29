@@ -1,16 +1,14 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 """
 ML Engine: API Contract Layer (Pydantic)
 Path: apps/ml-engine/models/schemas.py
-Purpose: Defines the structure of analytical payloads for the Staff Dashboard.
-Update: Made 'id' optional in ResearchResult to prevent 500 errors during 
-service synchronization (GS-33).
+Update [GS-38-FIX]: Explicitly added forecast_trajectory to the ResearchResult.
+Without this, FastAPI will strip the field from the JSON response.
 """
 
 class GlobalStats(BaseModel):
-    """Payload for the Intelligence Hub footer and Overview header."""
     total_indexed: int
     anomalies: int
     drift_24h: int
@@ -18,23 +16,37 @@ class GlobalStats(BaseModel):
     last_updated: str
 
 class SectorAnalysis(BaseModel):
-    """Payload for the Sector Anomaly Density bar chart."""
     name: str
     count: int
     risk: float
 
 class MarketMatrixPoint(BaseModel):
-    """Payload for the Valuation vs ESG Scatter Plot."""
     ticker: str
-    x: float  # Market Cap
-    y: int    # ESG Score (AI Adjusted)
-    z: float  # Carbon Intensity (Bubble Size)
+    x: float
+    y: int
+    z: float
     anomaly: bool
 
+class ShapFactor(BaseModel):
+    name: str
+    value: float
+    description: str
+
+class SentimentSignal(BaseModel):
+    source: str
+    headline: str
+    sentiment_score: float
+    impact_weight: float
+    date: str
+
+class ForecastPoint(BaseModel):
+    """Data structure for the 12-month predictive path."""
+    date: str
+    value: float
+    confidence_high: float
+    confidence_low: float
+
 class ResearchResult(BaseModel):
-    """Payload for the Ticker Forge and Discovery Table."""
-    # Made optional to prevent ResponseValidationError (500) if 
-    # the underlying service mapping is missing the 'id' key.
     id: Optional[str] = None 
     ticker: str
     name: str
@@ -44,23 +56,20 @@ class ResearchResult(BaseModel):
     ai_adjusted_score: int
     anomaly_detected: bool
     last_audit: str
-    # Made optional as ES search results might not compute 
-    # historical trends in real-time during discovery.
     esg_trend: Optional[str] = "STABLE"
+    shap_attribution: Optional[List[ShapFactor]] = []
+    sentiment_feed: Optional[List[SentimentSignal]] = []
+    divergence_detected: bool = False
+    
+    # CRITICAL FIX: This field MUST be here for the JSON to show it
+    forecast_trajectory: Optional[List[ForecastPoint]] = []
 
 class SearchRequest(BaseModel):
-    """The payload sent by the Discovery.tsx search bar."""
     query: str
     sector: Optional[str] = None
     page: int = 1
     limit: int = 10
 
 class SearchResponse(BaseModel):
-    """The high-speed results returned by Elasticsearch."""
     total: int
     hits: List[ResearchResult]
-
-class AnomalyFeed(BaseModel):
-    """Payload for the real-time anomaly discovery list."""
-    total_found: int
-    anomalies: List[ResearchResult]

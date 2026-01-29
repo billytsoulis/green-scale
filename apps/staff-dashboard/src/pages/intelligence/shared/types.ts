@@ -37,6 +37,10 @@ export interface ResearchResult {
   anomaly_detected: boolean;
   last_audit: string;
   esg_trend?: "UPWARD" | "STABLE" | "DOWNWARD";
+  shap_attribution?: any[];
+  sentiment_feed?: any[];
+  divergence_detected?: boolean;
+  forecast_trajectory?: any[];
 }
 
 export interface SearchRequest {
