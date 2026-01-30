@@ -12,6 +12,7 @@ import authRouter from "./routes/auth";
 import bankingRouter from "./routes/banking";
 import fundingRouter from "./routes/funding";
 import reportsRouter from "./routes/reports";
+import intelligenceRouter from "./routes/intelligence";
 
 /**
  * GreenScale API Gateway - Central Orchestrator
@@ -96,6 +97,8 @@ const startServer = async () => {
   // User Profile Management
   /** @ts-ignore */
   app.use("/api/users", usersRouter);
+
+  app.use("/api/intelligence", intelligenceRouter);
 
   /**
    * 5. Health Check & Diagnostics

@@ -31,15 +31,33 @@ export const db = drizzle(client, { schema });
 export { schema };
 export * from "./schema";
 
-// --- INFERRED TYPES FOR WORKSPACE USAGE ---
+// Auth (Identity)
 export type User = InferSelectModel<typeof schema.users>;
 export type NewUser = InferInsertModel<typeof schema.users>;
 
+// Business (Legacy Wealth Management)
 export type Portfolio = InferSelectModel<typeof schema.portfolios>;
 export type NewPortfolio = InferInsertModel<typeof schema.portfolios>;
-
 export type Transaction = InferSelectModel<typeof schema.transactions>;
 export type NewTransaction = InferInsertModel<typeof schema.transactions>;
-
 export type ESGHistory = InferSelectModel<typeof schema.esgHistory>;
+
+// Intelligence & Governance (Phase 8 Audit Trail)
 export type AuditLog = InferSelectModel<typeof schema.auditLogs>;
+export type IntelligenceAuditLog = InferSelectModel<typeof schema.intelligenceAuditLogs>;
+export type NewIntelligenceAuditLog = InferInsertModel<typeof schema.intelligenceAuditLogs>;
+
+// Projects & CMS (Phase 6 & GS-17 Media)
+export type Project = InferSelectModel<typeof schema.projects>;
+export type NewProject = InferInsertModel<typeof schema.projects>;
+/**
+ * MediaAsset Type
+ * This is now possible because of the export you selected in the Canvas.
+ */
+export type MediaAsset = InferSelectModel<typeof schema.mediaAssets>;
+export type NewMediaAsset = InferInsertModel<typeof schema.mediaAssets>;
+
+// Profiles & Assets (Investor Discovery Persistence)
+export type UserProfile = InferSelectModel<typeof schema.userProfiles>;
+export type LinkedAsset = InferSelectModel<typeof schema.linkedAssets>;
+export type RebalanceTransaction = InferSelectModel<typeof schema.rebalanceTransactions>;
